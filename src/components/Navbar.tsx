@@ -73,18 +73,22 @@ export default function Navbar() {
         <div className="flex items-center gap-2 sm:gap-3">
           {user ? (
             <>
-              {isAdmin && (
+              {isAdmin ? (
                 <Link href="/dashboard" className="btn-secondary hidden text-xs sm:inline-flex sm:text-sm">
+                  Dashboard
+                </Link>
+              ) : (
+                <Link href="/user-dashboard" className="btn-secondary hidden text-xs sm:inline-flex sm:text-sm">
                   Dashboard
                 </Link>
               )}
               <Link
-                href="/my-bookings"
+                href={isAdmin ? '/dashboard' : '/user-dashboard/bookings'}
                 className={`hidden text-sm font-medium lg:block ${
                   isHome ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-primary-600'
                 }`}
               >
-                My Bookings
+                {isAdmin ? 'Dashboard' : 'My Bookings'}
               </Link>
               <NotificationBell />
 
@@ -102,28 +106,19 @@ export default function Navbar() {
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                     <Link
-                      href={isAdmin ? '/dashboard/profile' : '/profile'}
+                      href={isAdmin ? '/dashboard/profile' : '/user-dashboard/profile'}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       My Profile
                     </Link>
                     <Link
-                      href="/my-bookings"
+                      href={isAdmin ? '/dashboard' : '/user-dashboard/bookings'}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      My Bookings
+                      {isAdmin ? 'Dashboard' : 'My Bookings'}
                     </Link>
-                    {isAdmin && (
-                      <Link
-                        href="/dashboard"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Dashboard
-                      </Link>
-                    )}
                     <button
                       type="button"
                       onClick={() => {
@@ -208,12 +203,21 @@ export default function Navbar() {
               {user && (
                 <>
                   <Link
-                    href="/my-bookings"
+                    href={isAdmin ? '/dashboard' : '/user-dashboard/bookings'}
                     className="rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
                     onClick={() => setMobileOpen(false)}
                   >
-                    My Bookings
+                    {isAdmin ? 'Dashboard' : 'My Bookings'}
                   </Link>
+                  {!isAdmin && (
+                    <Link
+                      href="/user-dashboard"
+                      className="rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      My Account
+                    </Link>
+                  )}
                   {isAdmin && (
                     <Link
                       href="/dashboard"

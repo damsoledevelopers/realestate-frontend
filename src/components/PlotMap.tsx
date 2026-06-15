@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
 import { Plot } from '@/lib/types';
 import { PLOT_STATUS } from '@/constants/css';
@@ -11,8 +11,13 @@ type PlotFilter = 'all' | 'available' | 'booked' | 'sold';
 interface PlotMapProps {
   layoutId: string;
   layoutImage?: string;
+  layoutName?: string;
+  layoutLocation?: string;
+  layoutCoordinates?: { lat?: number; lng?: number };
   plots: Plot[];
+  highlightPlotId?: string | null;
   onBookNow?: (plot: Plot) => void;
+  onViewMap?: (plot: Plot) => void;
 }
 
 function ZoomControls() {
@@ -48,9 +53,26 @@ function ZoomControls() {
   );
 }
 
-export default function PlotMap({ layoutId, layoutImage, plots, onBookNow }: PlotMapProps) {
+export default function PlotMap({
+  layoutId,
+  layoutImage,
+  layoutName,
+  layoutLocation,
+  layoutCoordinates,
+  plots,
+  highlightPlotId,
+  onBookNow,
+  onViewMap,
+}: PlotMapProps) {
   const [filter, setFilter] = useState<PlotFilter>('all');
   const [popupPlot, setPopupPlot] = useState<Plot | null>(null);
+  const [imageError, setImageError] = useState(false);
+
+  const showLayoutImage = Boolean(layoutImage) && !imageError;
+
+  useEffect(() => {
+    setImageError(false);
+  }, [layoutImage]);
 
   const filteredPlots = useMemo(() => {
     if (filter === 'all') return plots;
@@ -108,27 +130,35 @@ export default function PlotMap({ layoutId, layoutImage, plots, onBookNow }: Plo
             wrapperClass="!w-full"
             contentClass="!w-full"
           >
-            <div className="relative aspect-[16/10] w-full min-w-[320px] bg-gray-50">
-              {layoutImage ? (
+            <div
+              className={`relative aspect-[16/10] w-full min-w-[320px] ${
+                showLayoutImage ? 'bg-gray-50' : 'bg-[linear-gradient(#e5e7eb_1px,transparent_1px),linear-gradient(90deg,#e5e7eb_1px,transparent_1px)] bg-[size:32px_32px] bg-gray-100'
+              }`}
+            >
+              {showLayoutImage ? (
                 <img
                   src={layoutImage}
                   alt="Layout map"
                   className="h-full w-full object-contain p-2"
                   draggable={false}
+                  onError={() => setImageError(true)}
                 />
               ) : (
-                <div className="flex h-full min-h-[240px] items-center justify-center text-gray-400">
-                  <div className="text-center">
-                    <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1}
-                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                      />
-                    </svg>
-                    <p className="mt-2 text-sm">No layout image uploaded</p>
-                  </div>
+                <div className="flex h-full min-h-[240px] flex-col items-center justify-center px-4 text-center text-gray-500">
+                  <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                    />
+                  </svg>
+                  <p className="mt-2 text-sm font-medium">
+                    {imageError ? 'Layout image could not be loaded' : 'No layout image uploaded'}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Plot markers are still clickable below. Upload a site plan in admin.
+                  </p>
                 </div>
               )}
 
@@ -140,16 +170,22 @@ export default function PlotMap({ layoutId, layoutImage, plots, onBookNow }: Plo
                     e.stopPropagation();
                     setPopupPlot(plot);
                   }}
-                  className={`absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border-2 transition hover:scale-125 sm:h-6 sm:w-6 ${PLOT_STATUS[plot.status].map} ${
-                    popupPlot?._id === plot._id ? 'ring-2 ring-primary-500 ring-offset-1' : ''
+                  className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-md border-2 font-semibold text-white shadow-sm transition hover:scale-110 ${
+                    showLayoutImage ? 'h-5 w-5 sm:h-6 sm:w-6' : 'h-8 min-w-8 px-1 text-[10px] sm:h-9 sm:min-w-9 sm:text-xs'
+                  } ${PLOT_STATUS[plot.status].map} ${
+                    popupPlot?._id === plot._id || highlightPlotId === plot._id
+                      ? 'z-10 scale-125 ring-2 ring-primary-500 ring-offset-1'
+                      : ''
                   }`}
                   style={{
-                    left: `${plot.coordinates.x}%`,
-                    top: `${plot.coordinates.y}%`,
+                    left: `${plot.coordinates?.x ?? 50}%`,
+                    top: `${plot.coordinates?.y ?? 50}%`,
                   }}
                   title={`Plot ${plot.plotNumber} — ${plot.status}`}
                   aria-label={`Plot ${plot.plotNumber}, ${plot.status}`}
-                />
+                >
+                  {!showLayoutImage ? plot.plotNumber : null}
+                </button>
               ))}
             </div>
           </TransformComponent>
@@ -176,6 +212,10 @@ export default function PlotMap({ layoutId, layoutImage, plots, onBookNow }: Plo
           plot={popupPlot}
           onClose={() => setPopupPlot(null)}
           onBookNow={onBookNow ? handleBookNow : undefined}
+          onViewMap={onViewMap}
+          layoutName={layoutName}
+          layoutLocation={layoutLocation}
+          layoutCoordinates={layoutCoordinates}
         />
       )}
     </div>

@@ -14,5 +14,5 @@ export function getPostAuthRedirect(
 ): string {
   const safeReturn = sanitizeReturnPath(returnTo);
   if (safeReturn) return safeReturn;
-  return role === 'admin' ? '/dashboard' : '/my-bookings';
+  return role === 'admin' ? '/dashboard' : '/user-dashboard';
 }

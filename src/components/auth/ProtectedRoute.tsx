@@ -8,9 +8,14 @@ import { getPostAuthRedirect } from '@/lib/auth-redirect';
 interface ProtectedRouteProps {
   children: ReactNode;
   requireAdmin?: boolean;
+  requireUser?: boolean;
 }
 
-export default function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+export default function ProtectedRoute({
+  children,
+  requireAdmin = false,
+  requireUser = false,
+}: ProtectedRouteProps) {
   const { loading, isAuthenticated, isAdmin, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -26,8 +31,13 @@ export default function ProtectedRoute({ children, requireAdmin = false }: Prote
 
     if (requireAdmin && !isAdmin && user) {
       router.replace(getPostAuthRedirect(user.role));
+      return;
     }
-  }, [loading, isAuthenticated, isAdmin, requireAdmin, user, pathname, router]);
+
+    if (requireUser && isAdmin && user) {
+      router.replace('/dashboard');
+    }
+  }, [loading, isAuthenticated, isAdmin, requireAdmin, requireUser, user, pathname, router]);
 
   if (loading) {
     return (
@@ -39,6 +49,7 @@ export default function ProtectedRoute({ children, requireAdmin = false }: Prote
 
   if (!isAuthenticated()) return null;
   if (requireAdmin && !isAdmin) return null;
+  if (requireUser && isAdmin) return null;
 
   return <>{children}</>;
 }

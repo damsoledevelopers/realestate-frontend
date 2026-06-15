@@ -24,6 +24,7 @@ export default function LayoutDetailPage() {
   const [plots, setPlots] = useState<Plot[]>([]);
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
   const [showBooking, setShowBooking] = useState(false);
+  const [highlightPlotId, setHighlightPlotId] = useState<string | null>(null);
 
   const fetchData = () => {
     api
@@ -68,6 +69,22 @@ export default function LayoutDetailPage() {
   const availableCount =
     layout.plotStats?.available ?? plots.filter((p) => p.status === 'available').length;
 
+  const scrollToLocationMap = () => {
+    const el = document.getElementById('layout-location-map');
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('bg-primary-50');
+    window.setTimeout(() => {
+      el.classList.remove('bg-primary-50');
+    }, 1500);
+  };
+
+  const handleViewMap = (plot: Plot) => {
+    scrollToLocationMap();
+    setHighlightPlotId(plot._id);
+    window.setTimeout(() => setHighlightPlotId(null), 4000);
+  };
+
   return (
     <div className="bg-gray-50">
       <LayoutDetailHero
@@ -102,14 +119,19 @@ export default function LayoutDetailPage() {
               <PlotMap
                 layoutId={layout._id}
                 layoutImage={mapImage}
+                layoutName={layout.name}
+                layoutLocation={layout.location}
+                layoutCoordinates={layout.coordinates}
                 plots={plots}
+                highlightPlotId={highlightPlotId}
                 onBookNow={handleBookNow}
+                onViewMap={handleViewMap}
               />
             </div>
           </section>
 
           <aside className="space-y-6 lg:col-span-2">
-            <section className="card">
+            <section id="layout-location-map" className="card scroll-mt-24 transition-colors duration-300">
               <h2 className="text-lg font-semibold text-gray-900">Location</h2>
               <p className="mt-1 text-sm text-gray-500">{layout.location}</p>
               <div className="mt-4 overflow-hidden rounded-xl border border-gray-200">
@@ -122,7 +144,7 @@ export default function LayoutDetailPage() {
                     layoutId={layout._id}
                   />
                 ) : (
-                  <AddressFallback address={layout.location} />
+                  <AddressFallback address={layout.location} layoutName={layout.name} />
                 )}
               </div>
             </section>

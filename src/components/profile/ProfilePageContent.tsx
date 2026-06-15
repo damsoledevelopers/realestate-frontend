@@ -15,9 +15,13 @@ interface ProfileUser {
 
 interface ProfilePageContentProps {
   inDashboard?: boolean;
+  inUserDashboard?: boolean;
 }
 
-export default function ProfilePageContent({ inDashboard = false }: ProfilePageContentProps) {
+export default function ProfilePageContent({
+  inDashboard = false,
+  inUserDashboard = false,
+}: ProfilePageContentProps) {
   const { user, token, isAdmin, updateProfile } = useAuth();
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [bookingCount, setBookingCount] = useState(0);
@@ -32,7 +36,8 @@ export default function ProfilePageContent({ inDashboard = false }: ProfilePageC
     confirmPassword: '',
   });
 
-  const canEdit = inDashboard && isAdmin;
+  const canEdit = (inDashboard && isAdmin) || (inUserDashboard && !isAdmin);
+  const inShell = inDashboard || inUserDashboard;
 
   useEffect(() => {
     if (!token) return;
@@ -133,7 +138,7 @@ export default function ProfilePageContent({ inDashboard = false }: ProfilePageC
 
   if (loading && !displayUser) {
     return (
-      <div className={inDashboard ? 'max-w-3xl' : 'mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8'}>
+      <div className={inShell ? 'max-w-3xl' : 'mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8'}>
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 rounded bg-gray-200" />
           <div className="h-40 rounded-xl bg-gray-200" />
@@ -147,15 +152,15 @@ export default function ProfilePageContent({ inDashboard = false }: ProfilePageC
   const initial = displayUser.name?.charAt(0).toUpperCase() || '?';
 
   return (
-    <div className={inDashboard ? 'max-w-3xl' : 'mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8'}>
-      {!inDashboard && (
+    <div className={inShell ? 'max-w-3xl' : 'mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8'}>
+      {!inShell && (
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
           <p className="mt-2 text-gray-500">View your account details and quick links</p>
         </div>
       )}
 
-      <div className={`card ${inDashboard ? '' : 'mt-8'}`}>
+      <div className={`card ${inShell ? '' : 'mt-8'}`}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-wrap items-center gap-5">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-2xl font-bold text-primary-700">
@@ -272,11 +277,11 @@ export default function ProfilePageContent({ inDashboard = false }: ProfilePageC
         )}
       </div>
 
-      {!isAdmin && (
+      {!isAdmin && !inShell && (
         <div className="card mt-6">
           <h3 className="font-semibold text-gray-900">Quick Links</h3>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/my-bookings" className="btn-secondary text-sm">
+            <Link href="/user-dashboard/bookings" className="btn-secondary text-sm">
               My Bookings
             </Link>
             <Link href="/layouts" className="btn-secondary text-sm">

@@ -4,11 +4,11 @@ module.exports = {
   generateRobotsTxt: true,
   changefreq: 'weekly',
   priority: 0.7,
-  exclude: ['/dashboard', '/dashboard/*', '/login', '/register', '/my-bookings'],
+  exclude: ['/dashboard', '/dashboard/*', '/user-dashboard', '/user-dashboard/*', '/login', '/register', '/my-bookings', '/profile'],
   robotsTxtOptions: {
     policies: [
       { userAgent: '*', allow: '/' },
-      { userAgent: '*', disallow: ['/dashboard', '/login', '/register', '/my-bookings'] },
+      { userAgent: '*', disallow: ['/dashboard', '/user-dashboard', '/login', '/register', '/my-bookings', '/profile'] },
     ],
   },
   additionalPaths: async () => {

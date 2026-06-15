@@ -19,11 +19,34 @@ export function getMapEmbedUrl(lat?: number, lng?: number, address?: string): st
   return null;
 }
 
-export function getDirectionsUrl(lat: number, lng: number, address?: string): string {
-  const destination = address
-    ? encodeURIComponent(address)
-    : `${lat},${lng}`;
-  return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+export function getDirectionsUrl(lat?: number, lng?: number, address?: string): string {
+  if (hasValidCoordinates(lat, lng)) {
+    const destination = address?.trim()
+      ? encodeURIComponent(address.trim())
+      : `${lat},${lng}`;
+    return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+  }
+  if (address?.trim()) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address.trim())}`;
+  }
+  return 'https://www.google.com/maps';
+}
+
+export function getMapSearchUrl(
+  lat?: number,
+  lng?: number,
+  address?: string,
+  label?: string
+): string | null {
+  if (hasValidCoordinates(lat, lng)) {
+    const query = label ? `${label}@${lat},${lng}` : `${lat},${lng}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+  if (address?.trim()) {
+    const query = label ? `${label}, ${address.trim()}` : address.trim();
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+  return null;
 }
 
 export function hasValidCoordinates(
@@ -40,4 +63,11 @@ export function hasValidCoordinates(
     lng >= -180 &&
     lng <= 180
   );
+}
+
+/** Skip embed for placeholder text like "ewq4" that only shows a useless world map. */
+export function isUsableMapAddress(address?: string | null): boolean {
+  const trimmed = address?.trim() || '';
+  if (trimmed.length < 8) return false;
+  return trimmed.includes(',') || trimmed.includes(' ') || /\d/.test(trimmed);
 }
