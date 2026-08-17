@@ -1,7 +1,11 @@
 'use client';
 
-import ProfilePageContent from '@/components/profile/ProfilePageContent';
+import DashboardProfilePage from '@/components/profile/dashboard/DashboardProfilePage';
 
-export default function DashboardProfilePage() {
-  return <ProfilePageContent inDashboard />;
+export default function DashboardProfileRoutePage() {
+  return (
+    <div className="dashboard-page">
+      <DashboardProfilePage />
+    </div>
+  );
 }

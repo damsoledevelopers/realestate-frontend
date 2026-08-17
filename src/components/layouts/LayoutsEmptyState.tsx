@@ -1,9 +1,15 @@
+'use client';
+
+import { useLocale } from '@/context/LocaleContext';
+
 interface LayoutsEmptyStateProps {
   hasFilters?: boolean;
   onClearFilters?: () => void;
 }
 
 export default function LayoutsEmptyState({ hasFilters, onClearFilters }: LayoutsEmptyStateProps) {
+  const { t } = useLocale();
+
   return (
     <div className="mx-auto max-w-md py-16 text-center">
       <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
@@ -23,16 +29,14 @@ export default function LayoutsEmptyState({ hasFilters, onClearFilters }: Layout
         </svg>
       </div>
       <h3 className="mt-6 text-lg font-semibold text-gray-900">
-        {hasFilters ? 'No layouts match your filters' : 'No layouts available yet'}
+        {hasFilters ? t('layouts.noMatch') : t('layouts.none')}
       </h3>
       <p className="mt-2 text-sm text-gray-500">
-        {hasFilters
-          ? 'Try adjusting your search or filters to find more properties.'
-          : 'Check back soon for new property layouts and plot listings.'}
+        {hasFilters ? t('layouts.adjust') : t('layouts.checkBack')}
       </p>
       {hasFilters && onClearFilters && (
         <button type="button" onClick={onClearFilters} className="btn-secondary mt-6">
-          Clear filters
+          {t('layouts.clearFilters')}
         </button>
       )}
     </div>

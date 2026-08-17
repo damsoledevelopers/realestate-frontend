@@ -1,19 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
-import { Booking, Layout } from '@/lib/types';
+import { api, getApiErrorMessage } from '@/lib/api';
+import { Booking } from '@/lib/types';
+import { useManagedLayoutList } from '@/hooks/useManagedLayoutList';
 import StatusBadge from '@/components/bookings/StatusBadge';
+import ConstructionStatusBadge from '@/components/plots/ConstructionStatusBadge';
+import ResponsiveTable, { MobileDataCard, MobileDataRow } from '@/components/ui/ResponsiveTable';
 import { notify } from '@/lib/notify';
+import { useLocale } from '@/context/LocaleContext';
+import { getLayoutDisplayName } from '@/lib/localizedText';
 
 export default function AdminBookingsPage() {
   const { token } = useAuth();
+  const { locale, t } = useLocale();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [layoutFilter, setLayoutFilter] = useState('');
-  const [layouts, setLayouts] = useState<Layout[]>([]);
+  const { data: layouts = [] } = useManagedLayoutList();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState('');
@@ -21,9 +28,10 @@ export default function AdminBookingsPage() {
   const [bulkRejectNote, setBulkRejectNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchBookings = () => {
+  const fetchBookings = useCallback(() => {
     if (!token) return;
     setLoading(true);
+    setLoadError(null);
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
     if (layoutFilter) params.set('layoutId', layoutFilter);
@@ -35,19 +43,17 @@ export default function AdminBookingsPage() {
         setBookings(data);
         setSelected(new Set());
       })
-      .catch(() => notify.error('Failed to load bookings'))
+      .catch((err) => {
+        const message = getApiErrorMessage(err, t('dashboard.bookings.loadFailed'));
+        setLoadError(message);
+        notify.error(message);
+      })
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    if (token) {
-      api.get<Layout[]>('/layouts/admin/all', token).then(setLayouts).catch(() => {});
-    }
-  }, [token]);
+  }, [token, statusFilter, layoutFilter, t]);
 
   useEffect(() => {
     fetchBookings();
-  }, [token, statusFilter, layoutFilter]);
+  }, [fetchBookings]);
 
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
   const pendingIds = pendingBookings.map((b) => b._id);
@@ -76,11 +82,10 @@ export default function AdminBookingsPage() {
     setActionLoading(true);
     try {
       await api.patch(`/bookings/${id}/approve`, {}, token);
-      notify.success('Booking approved');
+      notify.success(t('dashboard.bookings.approveSuccess'));
       fetchBookings();
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      notify.error(error.message || 'Action failed');
+      notify.error(getApiErrorMessage(err, t('dashboard.bookings.actionFailed')));
     } finally {
       setActionLoading(false);
     }
@@ -88,19 +93,18 @@ export default function AdminBookingsPage() {
 
   const handleReject = async () => {
     if (!token || !rejectId || !rejectNote.trim()) {
-      notify.error('Please provide a rejection reason');
+      notify.error(t('dashboard.bookings.rejectReasonRequired'));
       return;
     }
     setActionLoading(true);
     try {
       await api.patch(`/bookings/${rejectId}/reject`, { adminNote: rejectNote }, token);
-      notify.success('Booking rejected');
+      notify.success(t('dashboard.bookings.rejectSuccess'));
       setRejectId(null);
       setRejectNote('');
       fetchBookings();
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      notify.error(error.message || 'Action failed');
+      notify.error(getApiErrorMessage(err, t('dashboard.bookings.actionFailed')));
     } finally {
       setActionLoading(false);
     }
@@ -109,7 +113,7 @@ export default function AdminBookingsPage() {
   const handleBulk = async (action: 'approve' | 'reject', note?: string) => {
     if (!token || selected.size === 0) return;
     if (action === 'reject' && !note?.trim()) {
-      notify.error('Please provide a rejection reason');
+      notify.error(t('dashboard.bookings.rejectReasonRequired'));
       return;
     }
 
@@ -122,60 +126,61 @@ export default function AdminBookingsPage() {
       );
       const count = result.processed?.length ?? 0;
       const failCount = result.failed?.length ?? 0;
-      if (count > 0) notify.success(`Processed ${count} booking(s)`);
-      if (failCount > 0) notify.error(`${failCount} booking(s) could not be processed`);
+      if (count > 0) notify.success(t('dashboard.bookings.processed', { count: String(count) }));
+      if (failCount > 0) notify.error(t('dashboard.bookings.bulkFailed', { count: String(failCount) }));
       setBulkRejectOpen(false);
       setBulkRejectNote('');
       fetchBookings();
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      notify.error(error.message || 'Bulk action failed');
+      notify.error(getApiErrorMessage(err, t('dashboard.bookings.bulkActionFailed')));
     } finally {
       setActionLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-page">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Bookings</h2>
-        <p className="mt-1 text-sm text-gray-500">Review and manage plot booking requests</p>
+        <h2 className="page-header-title">{t('dashboard.bookings.title')}</h2>
+        <p className="page-header-subtitle">{t('dashboard.bookings.subtitle')}</p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="input-field w-auto min-w-[140px]"
+          className="input-field w-full sm:w-auto sm:min-w-[140px]"
         >
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
+          <option value="">{t('dashboard.bookings.allStatuses')}</option>
+          <option value="pending">{t('dashboard.bookings.status.pending')}</option>
+          <option value="approved">{t('dashboard.bookings.status.approved')}</option>
+          <option value="rejected">{t('dashboard.bookings.status.rejected')}</option>
         </select>
         <select
           value={layoutFilter}
           onChange={(e) => setLayoutFilter(e.target.value)}
-          className="input-field w-auto min-w-[180px]"
+          className="input-field w-full sm:w-auto sm:min-w-[180px]"
         >
-          <option value="">All layouts</option>
+          <option value="">{t('dashboard.bookings.allLayouts')}</option>
           {layouts.map((l) => (
             <option key={l._id} value={l._id}>
-              {l.name}
+              {getLayoutDisplayName(l, locale)}
             </option>
           ))}
         </select>
 
         {selected.size > 0 && (
-          <div className="ml-auto flex gap-2">
-            <span className="self-center text-sm text-gray-500">{selected.size} selected</span>
+          <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:items-center">
+            <span className="self-center text-sm text-gray-500">
+              {t('dashboard.bookings.selected', { count: String(selected.size) })}
+            </span>
             <button
               type="button"
               onClick={() => handleBulk('approve')}
               disabled={actionLoading}
               className="btn-primary text-xs"
             >
-              Bulk Approve
+              {t('dashboard.bookings.bulkApprove')}
             </button>
             <button
               type="button"
@@ -183,19 +188,91 @@ export default function AdminBookingsPage() {
               disabled={actionLoading}
               className="btn-danger text-xs"
             >
-              Bulk Reject
+              {t('dashboard.bookings.bulkReject')}
             </button>
           </div>
         )}
       </div>
 
-      <div className="card overflow-x-auto">
+      <div className="card">
         {loading ? (
-          <p className="text-sm text-gray-400">Loading bookings...</p>
+          <p className="text-sm text-gray-400">{t('common.loading')}</p>
+        ) : loadError ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-red-500">{loadError}</p>
+            <button type="button" onClick={fetchBookings} className="btn-primary mt-4">
+              {t('common.retry')}
+            </button>
+          </div>
         ) : bookings.length === 0 ? (
-          <p className="text-sm text-gray-400">No bookings found</p>
+          <p className="text-sm text-gray-400">{t('dashboard.bookings.empty')}</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <ResponsiveTable
+            mobile={bookings.map((b) => (
+              <MobileDataCard key={b._id}>
+                <div className="mb-3 flex items-start justify-between gap-3 border-b border-gray-100 pb-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900">{b.fullName}</p>
+                    <p className="text-xs text-gray-500">{b.email}</p>
+                  </div>
+                  {b.status === 'pending' && (
+                    <input
+                      type="checkbox"
+                      checked={selected.has(b._id)}
+                      onChange={() => toggleOne(b._id)}
+                      aria-label={`Select booking ${b._id}`}
+                      className="mt-1 shrink-0"
+                    />
+                  )}
+                </div>
+                <MobileDataRow label={t('dashboard.bookings.colPlot')}>{b.plot?.plotNumber}</MobileDataRow>
+                <MobileDataRow label={t('dashboard.bookings.colConstruction')}>
+                  <ConstructionStatusBadge status={b.plot?.constructionStatus} showPattern />
+                </MobileDataRow>
+                <MobileDataRow label={t('dashboard.bookings.colLayout')}>
+                  {b.layout ? getLayoutDisplayName(b.layout, locale) : '—'}
+                </MobileDataRow>
+                <MobileDataRow label={t('dashboard.bookings.colDate')}>
+                  {new Date(b.createdAt).toLocaleDateString()}
+                </MobileDataRow>
+                <MobileDataRow label={t('dashboard.bookings.colStatus')}>
+                  <StatusBadge status={b.status} />
+                </MobileDataRow>
+                {b.status === 'pending' && (
+                  <MobileDataRow label={t('dashboard.bookings.colActions')} align="start">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(b._id)}
+                        disabled={actionLoading}
+                        className="btn-primary text-xs"
+                      >
+                        {t('dashboard.bookings.approve')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRejectId(b._id);
+                          setRejectNote('');
+                        }}
+                        disabled={actionLoading}
+                        className="btn-danger text-xs"
+                      >
+                        {t('dashboard.bookings.reject')}
+                      </button>
+                    </div>
+                  </MobileDataRow>
+                )}
+                {b.status === 'rejected' && b.adminNote && (
+                  <MobileDataRow label={t('dashboard.bookings.colActions')} align="start">
+                    <p className="text-xs text-gray-500">
+                      {t('dashboard.bookings.reason', { note: b.adminNote })}
+                    </p>
+                  </MobileDataRow>
+                )}
+              </MobileDataCard>
+            ))}
+          >
             <thead className="border-b text-xs uppercase text-gray-500">
               <tr>
                 <th className="px-3 py-3">
@@ -204,15 +281,16 @@ export default function AdminBookingsPage() {
                     checked={allPendingSelected}
                     onChange={toggleAll}
                     disabled={pendingIds.length === 0}
-                    aria-label="Select all pending"
+                    aria-label={t('dashboard.bookings.selectAllPending')}
                   />
                 </th>
-                <th className="px-3 py-3">User</th>
-                <th className="px-3 py-3">Plot</th>
-                <th className="px-3 py-3">Layout</th>
-                <th className="px-3 py-3">Date</th>
-                <th className="px-3 py-3">Status</th>
-                <th className="px-3 py-3">Actions</th>
+                <th className="px-3 py-3">{t('dashboard.bookings.colUser')}</th>
+                <th className="px-3 py-3">{t('dashboard.bookings.colPlot')}</th>
+                <th className="px-3 py-3">{t('dashboard.bookings.colConstruction')}</th>
+                <th className="px-3 py-3">{t('dashboard.bookings.colLayout')}</th>
+                <th className="px-3 py-3">{t('dashboard.bookings.colDate')}</th>
+                <th className="px-3 py-3">{t('dashboard.bookings.colStatus')}</th>
+                <th className="px-3 py-3">{t('dashboard.bookings.colActions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -233,7 +311,12 @@ export default function AdminBookingsPage() {
                     <p className="text-xs text-gray-500">{b.email}</p>
                   </td>
                   <td className="px-3 py-3">{b.plot?.plotNumber}</td>
-                  <td className="px-3 py-3 text-gray-500">{b.layout?.name}</td>
+                  <td className="px-3 py-3">
+                    <ConstructionStatusBadge status={b.plot?.constructionStatus} showPattern />
+                  </td>
+                  <td className="px-3 py-3 text-gray-500">
+                    {b.layout ? getLayoutDisplayName(b.layout, locale) : '—'}
+                  </td>
                   <td className="px-3 py-3 text-gray-500">
                     {new Date(b.createdAt).toLocaleDateString()}
                   </td>
@@ -249,7 +332,7 @@ export default function AdminBookingsPage() {
                           disabled={actionLoading}
                           className="btn-primary text-xs"
                         >
-                          Approve
+                          {t('dashboard.bookings.approve')}
                         </button>
                         <button
                           type="button"
@@ -260,32 +343,34 @@ export default function AdminBookingsPage() {
                           disabled={actionLoading}
                           className="btn-danger text-xs"
                         >
-                          Reject
+                          {t('dashboard.bookings.reject')}
                         </button>
                       </div>
                     )}
                     {b.status === 'rejected' && b.adminNote && (
-                      <p className="text-xs text-gray-500">Reason: {b.adminNote}</p>
+                      <p className="text-xs text-gray-500">
+                        {t('dashboard.bookings.reason', { note: b.adminNote })}
+                      </p>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         )}
       </div>
 
       {rejectId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold">Reject Booking</h3>
-            <p className="mt-1 text-sm text-gray-500">Provide a reason for the customer.</p>
+        <div className="modal-overlay">
+          <div className="modal-panel-md">
+            <h3 className="text-lg font-semibold">{t('dashboard.bookings.rejectTitle')}</h3>
+            <p className="mt-1 text-sm text-gray-500">{t('dashboard.bookings.rejectHint')}</p>
             <textarea
               className="input-field mt-4"
               rows={4}
               value={rejectNote}
               onChange={(e) => setRejectNote(e.target.value)}
-              placeholder="Rejection reason..."
+              placeholder={t('dashboard.bookings.rejectPlaceholder')}
               required
             />
             <div className="mt-4 flex gap-3">
@@ -294,7 +379,7 @@ export default function AdminBookingsPage() {
                 onClick={() => setRejectId(null)}
                 className="btn-secondary flex-1"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -302,7 +387,7 @@ export default function AdminBookingsPage() {
                 disabled={actionLoading}
                 className="btn-danger flex-1"
               >
-                {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
+                {actionLoading ? t('dashboard.bookings.rejecting') : t('dashboard.bookings.confirmReject')}
               </button>
             </div>
           </div>
@@ -310,18 +395,18 @@ export default function AdminBookingsPage() {
       )}
 
       {bulkRejectOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold">Bulk Reject ({selected.size})</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              This reason will apply to all selected bookings.
-            </p>
+        <div className="modal-overlay">
+          <div className="modal-panel-md">
+            <h3 className="text-lg font-semibold">
+              {t('dashboard.bookings.bulkRejectTitle', { count: String(selected.size) })}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">{t('dashboard.bookings.bulkRejectHint')}</p>
             <textarea
               className="input-field mt-4"
               rows={4}
               value={bulkRejectNote}
               onChange={(e) => setBulkRejectNote(e.target.value)}
-              placeholder="Rejection reason..."
+              placeholder={t('dashboard.bookings.rejectPlaceholder')}
               required
             />
             <div className="mt-4 flex gap-3">
@@ -333,7 +418,7 @@ export default function AdminBookingsPage() {
                 }}
                 className="btn-secondary flex-1"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -341,7 +426,7 @@ export default function AdminBookingsPage() {
                 disabled={actionLoading}
                 className="btn-danger flex-1"
               >
-                {actionLoading ? 'Rejecting...' : 'Confirm Bulk Reject'}
+                {actionLoading ? t('dashboard.bookings.rejecting') : t('dashboard.bookings.confirmBulkReject')}
               </button>
             </div>
           </div>

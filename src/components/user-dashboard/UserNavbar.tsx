@@ -40,7 +40,7 @@ export default function UserNavbar({ onMenuClick, title = 'My Account' }: UserNa
             </svg>
           </button>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
+            <h1 className="truncate text-base font-semibold text-gray-900 sm:text-lg">{title}</h1>
             <Link href="/" className="text-xs text-primary-600 hover:underline">
               View website
             </Link>

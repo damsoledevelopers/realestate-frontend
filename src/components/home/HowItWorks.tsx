@@ -1,31 +1,38 @@
-const STEPS = [
+'use client';
+
+import { useLocale } from '@/context/LocaleContext';
+import { TranslationKey } from '@/lib/i18n';
+
+const STEPS: { step: string; icon: string; titleKey: TranslationKey; descKey: TranslationKey }[] = [
   {
     step: '01',
     icon: '🗺️',
-    title: 'Browse Layouts',
-    description: 'Explore land layouts with photos, pricing, and plot availability on interactive maps.',
+    titleKey: 'home.how.step1.title',
+    descKey: 'home.how.step1.desc',
   },
   {
     step: '02',
     icon: '📍',
-    title: 'Select Your Plot',
-    description: 'Click plots on the layout map to view size, facing, price, and location details.',
+    titleKey: 'home.how.step2.title',
+    descKey: 'home.how.step2.desc',
   },
   {
     step: '03',
     icon: '✅',
-    title: 'Book & Confirm',
-    description: 'Submit a booking request online. Track approval status and download your receipt.',
+    titleKey: 'home.how.step3.title',
+    descKey: 'home.how.step3.desc',
   },
 ];
 
 export default function HowItWorks() {
+  const { t } = useLocale();
+
   return (
-    <section className="bg-gray-100 px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <section className="w-full overflow-x-hidden bg-gray-100 px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full min-w-0 max-w-7xl">
         <div className="text-center">
-          <h2 className="text-2xl font-bold sm:text-3xl">How It Works</h2>
-          <p className="mt-2 text-gray-500">Three simple steps to secure your plot.</p>
+          <h2 className="text-2xl font-bold sm:text-3xl">{t('home.how.title')}</h2>
+          <p className="mt-2 text-gray-500">{t('home.how.subtitle')}</p>
         </div>
 
         <div className="mt-12 grid gap-8 md:grid-cols-3">
@@ -38,11 +45,11 @@ export default function HowItWorks() {
                 />
               )}
               <span className="text-xs font-bold uppercase tracking-wider text-primary-600">
-                Step {item.step}
+                {t('home.how.stepLabel', { step: item.step })}
               </span>
               <div className="mt-4 text-4xl">{item.icon}</div>
-              <h3 className="mt-4 text-lg font-semibold text-primary-800">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-gray-500">{item.description}</p>
+              <h3 className="mt-4 text-lg font-semibold text-primary-800">{t(item.titleKey)}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray-500">{t(item.descKey)}</p>
             </div>
           ))}
         </div>

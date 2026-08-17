@@ -1,3 +1,5 @@
+import { AppRole, isCustomerRole, isDashboardUserRole } from '@/lib/roles';
+
 const BLOCKED_RETURN_PATHS = ['/login', '/register'];
 
 export function sanitizeReturnPath(path: string | null | undefined): string | null {
@@ -5,14 +7,21 @@ export function sanitizeReturnPath(path: string | null | undefined): string | nu
   if (BLOCKED_RETURN_PATHS.some((blocked) => path === blocked || path.startsWith(`${blocked}?`))) {
     return null;
   }
+  if (path.startsWith('/user-dashboard')) {
+    return null;
+  }
   return path;
 }
 
-export function getPostAuthRedirect(
-  role: 'user' | 'admin',
-  returnTo?: string | null
-): string {
+export function getPostAuthRedirect(role: AppRole, returnTo?: string | null): string {
   const safeReturn = sanitizeReturnPath(returnTo);
   if (safeReturn) return safeReturn;
-  return role === 'admin' ? '/dashboard' : '/user-dashboard';
+
+  if (isDashboardUserRole(role)) return '/dashboard';
+  if (isCustomerRole(role)) return '/my-bookings';
+  return '/layouts';
+}
+
+export function getCustomerFallbackPath(): string {
+  return '/my-bookings';
 }

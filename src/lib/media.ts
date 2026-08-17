@@ -1,7 +1,6 @@
-const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(
-  /\/api\/?$/,
-  ''
-);
+import { getApiOrigin } from '@/lib/apiBase';
+
+const API_ORIGIN = getApiOrigin();
 
 export function resolveMediaUrl(url?: string | null): string {
   if (!url?.trim()) return '';

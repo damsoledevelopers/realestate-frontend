@@ -1,37 +1,60 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useConfirm } from '@/context/ConfirmContext';
-import { api } from '@/lib/api';
+import { api, getApiErrorMessage } from '@/lib/api';
 import { Inquiry } from '@/lib/types';
 import { notify } from '@/lib/notify';
 import { INQUIRY_STATUSES, InquiryStatus } from '@/constants/inquiry';
 import InquiryStatusBadge from '@/components/inquiries/InquiryStatusBadge';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function AdminInquiriesPage() {
-  const { token } = useAuth();
+  const { token, isSuperAdmin } = useAuth();
   const confirm = useConfirm();
+  const { t } = useLocale();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [selected, setSelected] = useState<Inquiry | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchInquiries = () => {
-    if (!token) return;
+  const fetchInquiries = useCallback(() => {
+    if (!token || !isSuperAdmin) return;
     setLoading(true);
+    setLoadError(null);
     const query = statusFilter ? `?status=${statusFilter}` : '';
     api
       .get<Inquiry[]>(`/inquiries${query}`, token)
       .then(setInquiries)
-      .catch(() => notify.error('Failed to load inquiries'))
+      .catch((err) => {
+        const message = getApiErrorMessage(err, t('dashboard.inquiries.loadFailed'));
+        setLoadError(message);
+        notify.error(message);
+      })
       .finally(() => setLoading(false));
-  };
+  }, [token, statusFilter, t, isSuperAdmin]);
 
   useEffect(() => {
     fetchInquiries();
-  }, [token, statusFilter]);
+  }, [fetchInquiries]);
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="dashboard-page">
+        <div className="card py-12 text-center">
+          <h2 className="text-lg font-semibold text-gray-900">{t('dashboard.inquiries.title')}</h2>
+          <p className="mt-2 text-sm text-gray-500">{t('dashboard.inquiries.superAdminOnly')}</p>
+          <Link href="/dashboard" className="btn-primary mt-6 inline-flex">
+            {t('dashboard.nav.dashboard')}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const counts = useMemo(
     () => ({
@@ -47,10 +70,9 @@ export default function AdminInquiriesPage() {
       const updated = await api.patch<Inquiry>(`/inquiries/${id}/status`, { status }, token);
       setInquiries((prev) => prev.map((i) => (i._id === id ? updated : i)));
       setSelected((prev) => (prev?._id === id ? updated : prev));
-      if (!silent) notify.success(`Marked as ${status}`);
+      if (!silent) notify.success(t('dashboard.inquiries.statusUpdated', { status }));
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      notify.error(error.message || 'Failed to update status');
+      notify.error(getApiErrorMessage(err, t('dashboard.inquiries.statusUpdateFailed')));
     } finally {
       setActionLoading(false);
     }
@@ -59,9 +81,9 @@ export default function AdminInquiriesPage() {
   const remove = async (id: string) => {
     if (!token) return;
     const confirmed = await confirm({
-      title: 'Delete inquiry',
-      message: 'Delete this inquiry?',
-      confirmLabel: 'Delete',
+      title: t('dashboard.inquiries.deleteTitle'),
+      message: t('dashboard.inquiries.deleteMessage'),
+      confirmLabel: t('common.delete'),
       variant: 'danger',
     });
     if (!confirmed) return;
@@ -69,10 +91,9 @@ export default function AdminInquiriesPage() {
       await api.delete(`/inquiries/${id}`, token);
       setInquiries((prev) => prev.filter((i) => i._id !== id));
       setSelected(null);
-      notify.success('Inquiry deleted');
+      notify.success(t('dashboard.inquiries.deleteSuccess'));
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      notify.error(error.message || 'Failed to delete');
+      notify.error(getApiErrorMessage(err, t('dashboard.inquiries.deleteFailed')));
     }
   };
 
@@ -95,76 +116,87 @@ export default function AdminInquiriesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="dashboard-page">
+      <div className="page-header">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Contact Inquiries</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Messages from the contact form
+          <h2 className="page-header-title">{t('dashboard.inquiries.title')}</h2>
+          <p className="page-header-subtitle">
+            {t('dashboard.inquiries.subtitle')}
             {!statusFilter && counts.new > 0 && (
-              <span className="ml-2 font-medium text-blue-600">{counts.new} new</span>
+              <span className="ml-2 font-medium text-blue-600">
+                {t('dashboard.inquiries.newCount', { count: String(counts.new) })}
+              </span>
             )}
           </p>
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="input-field w-auto min-w-[140px]"
+          className="input-field w-full sm:w-auto sm:min-w-[140px]"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('dashboard.inquiries.allStatuses')}</option>
           {INQUIRY_STATUSES.map((status) => (
             <option key={status} value={status}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {t(`dashboard.inquiries.status.${status}`)}
             </option>
           ))}
         </select>
       </div>
 
-      <div className="card overflow-x-auto">
+      <div className="card">
         {loading ? (
-          <p className="text-sm text-gray-400">Loading inquiries...</p>
+          <p className="text-sm text-gray-400">{t('common.loading')}</p>
+        ) : loadError ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-red-500">{loadError}</p>
+            <button type="button" onClick={fetchInquiries} className="btn-primary mt-4">
+              {t('common.retry')}
+            </button>
+          </div>
         ) : inquiries.length === 0 ? (
-          <p className="text-sm text-gray-400">No inquiries found.</p>
+          <p className="text-sm text-gray-400">{t('dashboard.inquiries.empty')}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Subject</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {inquiries.map((inq) => (
-                <tr
-                  key={inq._id}
-                  onClick={() => openInquiry(inq)}
-                  className={`cursor-pointer transition hover:bg-gray-50 ${
-                    inq.status === 'new' ? 'bg-blue-50/40' : ''
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{inq.name}</p>
-                    <p className="text-xs text-gray-500">{inq.email}</p>
-                  </td>
-                  <td className="px-4 py-3">{inq.subject}</td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {new Date(inq.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <InquiryStatusBadge status={inq.status} />
-                  </td>
+          <div className="table-wrap">
+            <table className="table-data">
+              <thead className="border-b text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="px-4 py-3">{t('dashboard.inquiries.colName')}</th>
+                  <th className="px-4 py-3">{t('dashboard.inquiries.colSubject')}</th>
+                  <th className="px-4 py-3">{t('dashboard.inquiries.colDate')}</th>
+                  <th className="px-4 py-3">{t('dashboard.inquiries.colStatus')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {inquiries.map((inq) => (
+                  <tr
+                    key={inq._id}
+                    onClick={() => openInquiry(inq)}
+                    className={`cursor-pointer transition hover:bg-gray-50 ${
+                      inq.status === 'new' ? 'bg-blue-50/40' : ''
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{inq.name}</p>
+                      <p className="text-xs text-gray-500">{inq.email}</p>
+                    </td>
+                    <td className="px-4 py-3">{inq.subject}</td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(inq.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <InquiryStatusBadge status={inq.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+        <div className="modal-overlay">
+          <div className="modal-panel">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold">{selected.name}</h3>
@@ -176,15 +208,15 @@ export default function AdminInquiriesPage() {
 
             <dl className="mt-4 space-y-2 text-sm">
               <div>
-                <dt className="text-gray-500">Subject</dt>
+                <dt className="text-gray-500">{t('dashboard.inquiries.subject')}</dt>
                 <dd className="font-medium">{selected.subject}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Received</dt>
+                <dt className="text-gray-500">{t('dashboard.inquiries.received')}</dt>
                 <dd>{new Date(selected.createdAt).toLocaleString()}</dd>
               </div>
               <div>
-                <dt className="text-gray-500">Message</dt>
+                <dt className="text-gray-500">{t('dashboard.inquiries.message')}</dt>
                 <dd className="mt-1 whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-gray-700">
                   {selected.message}
                 </dd>
@@ -198,7 +230,7 @@ export default function AdminInquiriesPage() {
                 disabled={actionLoading}
                 className="btn-primary text-sm"
               >
-                Reply by Email
+                {t('dashboard.inquiries.replyEmail')}
               </button>
               {selected.status !== 'read' && (
                 <button
@@ -207,7 +239,7 @@ export default function AdminInquiriesPage() {
                   disabled={actionLoading}
                   className="btn-secondary text-sm"
                 >
-                  Mark Read
+                  {t('dashboard.inquiries.markRead')}
                 </button>
               )}
               {selected.status !== 'replied' && (
@@ -217,7 +249,7 @@ export default function AdminInquiriesPage() {
                   disabled={actionLoading}
                   className="btn-secondary text-sm"
                 >
-                  Mark Replied
+                  {t('dashboard.inquiries.markReplied')}
                 </button>
               )}
               <button
@@ -225,14 +257,14 @@ export default function AdminInquiriesPage() {
                 onClick={() => remove(selected._id)}
                 className="btn-danger text-sm"
               >
-                Delete
+                {t('common.delete')}
               </button>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
                 className="btn-secondary ml-auto text-sm"
               >
-                Close
+                {t('common.close')}
               </button>
             </div>
           </div>

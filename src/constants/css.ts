@@ -51,14 +51,19 @@ export const PLOT_STATUS = {
     legend: 'bg-green-500',
   },
   booked: {
-    map: 'bg-yellow-500/70 border-yellow-600',
-    badge: 'bg-yellow-100 text-yellow-700',
+    map: 'bg-yellow-500/80 border-yellow-600 hover:bg-yellow-500',
+    badge: 'bg-yellow-100 text-yellow-800',
     legend: 'bg-yellow-500',
   },
   sold: {
     map: 'bg-red-500/70 border-red-600',
     badge: 'bg-red-100 text-red-700',
     legend: 'bg-red-500',
+  },
+  reserved: {
+    map: 'bg-pink-500/80 border-pink-600 hover:bg-pink-500',
+    badge: 'bg-pink-100 text-pink-700',
+    legend: 'bg-pink-500',
   },
 } as const;
 
@@ -109,10 +114,32 @@ export const FORM = {
 } as const;
 
 export const TABLE = {
-  wrapper: 'overflow-x-auto rounded-xl border border-gray-200',
-  head: 'bg-gray-50 text-xs uppercase text-gray-500',
-  row: 'bg-white',
-  cell: 'px-4 py-3',
+  wrapper: 'table-wrap',
+  table: 'table-data',
+  tableLg: 'table-data-lg',
+  head: 'border-b text-xs uppercase text-gray-500',
+  row: 'divide-y',
+  cell: 'px-3 py-3',
+} as const;
+
+export const RESPONSIVE = {
+  dashboardPage: 'dashboard-page',
+  pageHeader: 'page-header',
+  pageHeaderTitle: 'page-header-title',
+  pageHeaderSubtitle: 'page-header-subtitle',
+  cardGrid: 'card-grid',
+  cardGrid3: 'card-grid-3',
+  cardGrid2: 'card-grid-2',
+  formGrid: 'form-grid',
+  formGrid3: 'form-grid-3',
+  tableWrap: 'table-wrap',
+  tableData: 'table-data',
+  tableDataLg: 'table-data-lg',
+  listRow: 'list-row',
+  btnStack: 'btn-stack',
+  modalOverlay: 'modal-overlay',
+  modalPanel: 'modal-panel',
+  modalPanelMd: 'modal-panel-md',
 } as const;
 
 export type PlotStatusKey = keyof typeof PLOT_STATUS;

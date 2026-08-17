@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { getApiBaseUrl } from '@/lib/apiBase';
+
+const API_URL = getApiBaseUrl();
 
 export interface ApiError {
   message: string;
@@ -88,8 +90,12 @@ export const api = {
   patch: <T>(endpoint: string, body: unknown, token?: string | null) =>
     request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(body) }, token),
 
-  delete: <T>(endpoint: string, token?: string | null) =>
-    request<T>(endpoint, { method: 'DELETE' }, token),
+  delete: <T>(endpoint: string, token?: string | null, body?: unknown) =>
+    request<T>(
+      endpoint,
+      { method: 'DELETE', body: body ? JSON.stringify(body) : undefined },
+      token
+    ),
 
   postForm: <T>(endpoint: string, formData: FormData, token?: string | null) =>
     formRequest<T>(endpoint, 'POST', formData, token),

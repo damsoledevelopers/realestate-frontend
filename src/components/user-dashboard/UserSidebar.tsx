@@ -60,9 +60,17 @@ export default function UserSidebar({ open, onClose }: UserSidebarProps) {
       </aside>
 
       {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-          <aside className="absolute left-0 top-0 h-full w-64 bg-white shadow-xl">
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+          <aside className="absolute left-0 top-0 flex h-full w-[min(16rem,85vw)] flex-col bg-white shadow-xl">
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-3 top-4 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Close menu"
+            >
+              ✕
+            </button>
             {navContent}
           </aside>
         </div>

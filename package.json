@@ -3,15 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next dev -p 3001",
+    "build": "node --max-old-space-size=4096 ./node_modules/next/dist/bin/next build",
     "postbuild": "next-sitemap",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "next lint"
   },
   "dependencies": {
     "@googlemaps/markerclusterer": "^2.6.2",
     "@vis.gl/react-google-maps": "^1.8.3",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.23.0",
     "next": "^14.2.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -20,6 +22,7 @@
     "react-hot-toast": "^2.4.1",
     "react-zoom-pan-pinch": "^4.0.3",
     "recharts": "^3.8.1",
+    "socket.io-client": "^4.8.3",
     "swr": "^2.4.1"
   },
   "devDependencies": {

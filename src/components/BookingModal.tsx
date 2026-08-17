@@ -6,6 +6,9 @@ import { Plot } from '@/lib/types';
 import { useAuth } from '@/context/AuthContext';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { notify } from '@/lib/notify';
+import ConstructionStatusBadge from '@/components/plots/ConstructionStatusBadge';
+import StatusBadge from '@/components/property/StatusBadge';
+import { formatPrice } from '@/lib/layoutStats';
 
 interface BookingForm {
   fullName: string;
@@ -69,8 +72,8 @@ export default function BookingModal({
 
   if (success) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-xl">
+      <div className="modal-overlay">
+        <div className="modal-panel-md text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -90,8 +93,8 @@ export default function BookingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-panel-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Book Plot</h2>
           <button
@@ -108,9 +111,13 @@ export default function BookingModal({
           <p className="font-semibold text-primary-800">Plot {plot.plotNumber}</p>
           {layoutName && <p className="mt-1 text-primary-700">{layoutName}</p>}
           {layoutLocation && <p className="text-primary-600">{layoutLocation}</p>}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <StatusBadge status={plot.status} size="sm" />
+            <ConstructionStatusBadge status={plot.constructionStatus} size="sm" showPattern />
+          </div>
           <div className="mt-2 flex flex-wrap gap-3 text-primary-800">
             <span>{plot.size}</span>
-            <span className="font-medium">₹{plot.price.toLocaleString()}</span>
+            <span className="font-medium">{formatPrice(plot.price)}</span>
             {plot.facing && <span>Facing: {plot.facing}</span>}
           </div>
         </div>
@@ -151,7 +158,7 @@ export default function BookingModal({
             <label className="mb-1 block text-sm font-medium">Message (optional)</label>
             <textarea className="input-field" rows={3} {...register('message')} />
           </div>
-          <div className="flex gap-3">
+          <div className="btn-stack">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Cancel
             </button>

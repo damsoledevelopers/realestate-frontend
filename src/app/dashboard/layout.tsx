@@ -5,7 +5,7 @@ import AdminShell from '@/components/dashboard/AdminShell';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute requireAdmin>
+    <ProtectedRoute requireDashboard>
       <AdminShell>{children}</AdminShell>
     </ProtectedRoute>
   );

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useLocale } from '@/context/LocaleContext';
 
 export interface ConfirmOptions {
   title?: string;
@@ -16,6 +17,7 @@ type ConfirmFn = (options: ConfirmOptions | string) => Promise<boolean>;
 const ConfirmContext = createContext<ConfirmFn | null>(null);
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useLocale();
   const [state, setState] = useState<(ConfirmOptions & { open: boolean }) | null>(null);
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
 
@@ -50,11 +52,11 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       <ConfirmDialog
         open={!!state?.open}
-        title={state?.title}
-        message={state?.message ?? ''}
-        confirmLabel={state?.confirmLabel}
-        cancelLabel={state?.cancelLabel}
-        variant={state?.variant}
+        title={state?.title ?? t('common.confirm')}
+        description={state?.message ?? ''}
+        confirmLabel={state?.confirmLabel ?? t('common.confirm')}
+        cancelLabel={state?.cancelLabel ?? t('common.cancel')}
+        destructive={state?.variant === 'danger'}
         onConfirm={() => close(true)}
         onCancel={() => close(false)}
       />

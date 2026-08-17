@@ -6,7 +6,11 @@ import { api } from '@/lib/api';
 import { Notification } from '@/lib/types';
 import { NOTIFICATION_TYPE } from '@/constants/css';
 
-export default function NotificationBell() {
+export default function NotificationBell({
+  variant = 'default',
+}: {
+  variant?: 'default' | 'dark';
+}) {
   const { token } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -74,7 +78,11 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+        className={
+          variant === 'dark'
+            ? 'relative rounded-lg p-2 text-white hover:bg-white/10'
+            : 'relative rounded-lg p-2 text-gray-600 hover:bg-gray-100'
+        }
         aria-label="Notifications"
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -8,7 +8,7 @@ export function useAdminStats() {
 
   return useSWR<DashboardStats>(
     token ? ['admin-stats', token] : null,
-    () => api.get<DashboardStats>('/admin/stats', token),
+    () => api.get<DashboardStats>('/dashboard/stats', token),
     { revalidateOnFocus: false }
   );
 }

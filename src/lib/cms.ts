@@ -58,6 +58,10 @@ export interface ContactCms {
 
 export type CmsData = HeroCms | AboutCms | FeaturesCms | FooterCms | ContactCms;
 
+/** Default About page image when CMS has none set (Unsplash — same source as auth/seed imagery). */
+export const ABOUT_SAMPLE_IMAGE =
+  'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80';
+
 export const CMS_TABS: { id: CmsSection; label: string }[] = [
   { id: 'hero', label: 'Hero' },
   { id: 'about', label: 'About' },
@@ -78,17 +82,17 @@ export const CMS_DEFAULTS: {
     badge: 'A trusted premium land & plot platform',
     title: 'Find Your Perfect Plot',
     subtitle:
-      'Browse premium land layouts, explore interactive plot maps, and book your dream property — secure, transparent, and all in one place.',
+      'View Layouts, Plots, Lands, Row Houses & Farms with the help of GNSS Technology',
     backgroundImage: '',
     ctaText: 'View Layouts',
     ctaLink: '/layouts',
   },
   about: {
     section: 'about',
-    title: 'About Us',
+    title: 'Building Trust Through Smart Real Estate Solutions',
     description:
-      'We specialize in land development and plot management, helping families and investors find the perfect property.',
-    image: '',
+      'We specialize in land development and plot management, helping families and investors find the perfect property with transparent pricing and interactive layout maps.',
+    image: ABOUT_SAMPLE_IMAGE,
   },
   features: {
     section: 'features',

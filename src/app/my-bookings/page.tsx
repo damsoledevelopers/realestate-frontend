@@ -1,14 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import MyBookingsContent from '@/components/bookings/MyBookingsContent';
 
 export default function MyBookingsPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/user-dashboard/bookings');
-  }, [router]);
-
-  return null;
+  return <MyBookingsContent />;
 }

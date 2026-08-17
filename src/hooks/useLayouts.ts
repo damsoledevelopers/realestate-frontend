@@ -4,10 +4,14 @@ import { Layout } from '@/lib/types';
 
 export type LayoutStatusFilter = 'active' | 'all';
 
-export function useLayouts(statusFilter: LayoutStatusFilter = 'active') {
+export function useLayouts(
+  statusFilter: LayoutStatusFilter = 'active',
+  options?: { enabled?: boolean }
+) {
   const endpoint = statusFilter === 'all' ? '/layouts?status=all' : '/layouts';
+  const enabled = options?.enabled !== false;
 
-  return useSWR<Layout[]>(['layouts', statusFilter], () => api.get<Layout[]>(endpoint), {
+  return useSWR<Layout[]>(enabled ? ['layouts', statusFilter] : null, () => api.get<Layout[]>(endpoint), {
     revalidateOnFocus: false,
   });
 }

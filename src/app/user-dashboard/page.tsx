@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { Booking } from '@/lib/types';
 import StatusBadge from '@/components/bookings/StatusBadge';
+import { useLocale } from '@/context/LocaleContext';
+import { getLayoutDisplayName } from '@/lib/localizedText';
 
 interface MyBookingsResponse {
   bookings: Booking[];
@@ -14,6 +16,7 @@ interface MyBookingsResponse {
 
 export default function UserDashboardPage() {
   const { user, token } = useAuth();
+  const { locale } = useLocale();
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -46,15 +49,15 @@ export default function UserDashboardPage() {
   const approved = allBookings.filter((b) => b.status === 'approved').length;
 
   return (
-    <div className="space-y-8">
+    <div className="dashboard-page">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="page-header-title">
           Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">Manage your plot bookings and account</p>
+        <p className="page-header-subtitle">Manage your plot bookings and account</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="card-grid-3">
         <div className="card">
           <p className="text-sm font-medium text-gray-500">Total Bookings</p>
           <p className="mt-2 text-3xl font-bold text-gray-900">{loading ? '—' : total}</p>
@@ -91,8 +94,8 @@ export default function UserDashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="mt-4 table-wrap">
+            <table className="table-data">
               <thead className="border-b text-xs uppercase text-gray-500">
                 <tr>
                   <th className="px-3 py-3">Plot</th>
@@ -105,7 +108,9 @@ export default function UserDashboardPage() {
                 {recentBookings.map((b) => (
                   <tr key={b._id} className="text-gray-700">
                     <td className="px-3 py-3 font-medium">{b.plot?.plotNumber}</td>
-                    <td className="px-3 py-3">{b.layout?.name}</td>
+                    <td className="px-3 py-3">
+                      {b.layout ? getLayoutDisplayName(b.layout, locale) : '—'}
+                    </td>
                     <td className="px-3 py-3 text-gray-500">
                       {new Date(b.createdAt).toLocaleDateString()}
                     </td>

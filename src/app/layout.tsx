@@ -1,8 +1,14 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Inter, Poppins } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { ConfirmProvider } from '@/context/ConfirmContext';
+import { PromptProvider } from '@/context/PromptContext';
+import { PropertyStatusConfigProvider } from '@/context/PropertyStatusConfigContext';
+import { LocaleProvider } from '@/context/LocaleContext';
+import { LocaleConfigProvider } from '@/context/LocaleConfigContext';
+import LocalePreferencesSync from '@/components/locale/LocalePreferencesSync';
+import LocaleHtmlSync from '@/components/locale/LocaleHtmlSync';
 import AppChrome from '@/components/layout/AppChrome';
 import { getOgImageUrl, getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 import './globals.css';
@@ -13,8 +19,20 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-poppins',
+});
+
 const siteUrl = getSiteUrl();
 const ogImage = getOgImageUrl();
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: {
@@ -46,12 +64,22 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className={inter.className}>
+    <html lang="en" className={`${inter.variable} ${poppins.variable} overflow-x-hidden`}>
+      <body className={`${inter.className} min-w-0 overflow-x-hidden font-sans`}>
         <AuthProvider>
-          <ConfirmProvider>
-            <AppChrome>{children}</AppChrome>
-          </ConfirmProvider>
+          <LocaleConfigProvider>
+            <LocaleProvider>
+              <LocaleHtmlSync />
+              <PropertyStatusConfigProvider>
+                <ConfirmProvider>
+                  <PromptProvider>
+                    <LocalePreferencesSync />
+                    <AppChrome>{children}</AppChrome>
+                  </PromptProvider>
+                </ConfirmProvider>
+              </PropertyStatusConfigProvider>
+            </LocaleProvider>
+          </LocaleConfigProvider>
           <Toaster
             position="top-right"
             toastOptions={{
