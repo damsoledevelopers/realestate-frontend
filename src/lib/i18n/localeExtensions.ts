@@ -38,7 +38,9 @@ export const localeExtensions = {
     'auth.login.usePassword': 'Use password instead',
     'auth.login.useOtp': 'Use OTP instead',
     'auth.register.title': 'Create your account',
-    'auth.register.subtitle': 'Sign up to buy property or to list and manage your land projects.',
+    'auth.register.subtitle': 'Create a customer account to browse layouts and enquire about plots.',
+    'auth.register.sellViaAdminNote':
+      'Want to sell land, a farm, or plots? Contact the Admin — there is no separate seller login. The Admin will register and list your property for customers.',
     'auth.register.submit': 'Create account',
     'auth.register.submitRequest': 'Send request',
     'auth.register.submitting': 'Please wait...',
@@ -735,6 +737,9 @@ export const localeExtensions = {
     'layoutForm.qrImage': 'QR Code image (optional)',
     'layoutForm.qrImageHint': 'Upload a QR image for this layout while creating or editing (optional).',
     'layoutForm.qrImageEditHint': 'Upload a new QR image to add or replace the existing one.',
+    'layoutForm.layoutFile': 'Layout file (XML / AML / KML)',
+    'layoutForm.layoutFileHint':
+      'Upload the survey layout file to import plot boundaries, coordinates, and plot numbers.',
     'plotForm.qrImage': 'QR Code image (optional)',
     'plotForm.qrImageHint': 'Upload a QR image for this plot while creating (optional).',
     'layoutForm.saving': 'Saving...',
@@ -942,7 +947,9 @@ export const localeExtensions = {
     'auth.login.usePassword': 'त्याऐवजी पासवर्ड वापरा',
     'auth.login.useOtp': 'त्याऐवजी OTP वापरा',
     'auth.register.title': 'तुमचे खाते तयार करा',
-    'auth.register.subtitle': 'मालमत्ता खरेदी करण्यासाठी किंवा तुमचे जमीन प्रकल्प सूचीबद्ध आणि व्यवस्थापित करण्यासाठी नोंदणी करा.',
+    'auth.register.subtitle': 'लेआउट पाहण्यासाठी आणि प्लॉटबद्दल चौकशी करण्यासाठी ग्राहक खाते तयार करा.',
+    'auth.register.sellViaAdminNote':
+      'जमीन, शेत किंवा प्लॉट विकायचे आहेत? अॅडमिनशी संपर्क साधा — वेगळे विक्रेता लॉगिन नाही. अॅडमिन तुमची मालमत्ता नोंदवून ग्राहकांसाठी सूचीबद्ध करतील.',
     'auth.register.submit': 'खाते तयार करा',
     'auth.register.submitRequest': 'विनंती पाठवा',
     'auth.register.submitting': 'कृपया प्रतीक्षा करा...',
@@ -1640,6 +1647,9 @@ export const localeExtensions = {
     'layoutForm.qrImage': 'QR कोड प्रतिमा (ऐच्छिक)',
     'layoutForm.qrImageHint': 'लेआउट तयार/संपादित करताना QR प्रतिमा अपलोड करा (ऐच्छिक).',
     'layoutForm.qrImageEditHint': 'नवीन QR प्रतिमा अपलोड करा — विद्यमान QR जोडेल किंवा बदलेल.',
+    'layoutForm.layoutFile': 'लेआउट फाइल (XML / AML / KML)',
+    'layoutForm.layoutFileHint':
+      'प्लॉट सीमा, निर्देशांक आणि प्लॉट क्रमांक आयात करण्यासाठी सर्वे लेआउट फाइल अपलोड करा.',
     'plotForm.qrImage': 'QR कोड प्रतिमा (ऐच्छिक)',
     'plotForm.qrImageHint': 'प्लॉट तयार करताना QR प्रतिमा अपलोड करा (ऐच्छिक).',
     'layoutForm.saving': 'जतन होत आहे...',

@@ -17,7 +17,7 @@ import LayoutPropertiesPanel from '@/components/dashboard/LayoutPropertiesPanel'
 import PropertyContactAssignPanel from '@/components/dashboard/PropertyContactAssignPanel';
 import LayoutCustomersPanel from '@/components/dashboard/LayoutCustomersPanel';
 import LayoutOverviewStatGrid from '@/components/dashboard/LayoutOverviewStatGrid';
-import { getGoogleMapsExternalUrl } from '@/lib/googleMaps';
+import { getViewOnMapUrl } from '@/lib/googleMaps';
 import PropertyQrPanel from '@/components/qr/PropertyQrPanel';
 import SitePhotosPanel from '@/components/sitePhotos/SitePhotosPanel';
 import ExternalLinksPanel from '@/components/externalLinks/ExternalLinksPanel';
@@ -69,10 +69,14 @@ export default function DashboardLayoutDetailPage() {
   }
 
   const stats = layout.plotStats;
-  const mapsUrl = getGoogleMapsExternalUrl(
-    layout.latitude ?? layout.coordinates?.lat,
-    layout.longitude ?? layout.coordinates?.lng
-  );
+  const mapsUrl = getViewOnMapUrl({
+    latitude: layout.latitude ?? layout.coordinates?.lat,
+    longitude: layout.longitude ?? layout.coordinates?.lng,
+    boundary: layout.boundaryPath,
+    polylines: layout.mapLinesPath,
+    layoutId: layout._id,
+    hasMapGeoJson: layout.hasMapGeoJson || (layout.mapLineCount ?? 0) > 0,
+  });
 
   const displayName = getLayoutDisplayName(layout, locale);
   const displayLocation = getLocalizedLocation(layout.location, locale, layout.locationMr);

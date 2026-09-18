@@ -1,12 +1,16 @@
 export type AppRole = 'super_admin' | 'user' | 'customer' | 'admin';
 export type DashboardRequestStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
+export function isAdminLoginRole(role?: string | null): boolean {
+  return role === 'super_admin' || role === 'user' || role === 'admin';
+}
+
 export function isSuperAdminRole(role?: string | null): boolean {
   return role === 'super_admin';
 }
 
 export function isDashboardUserRole(role?: string | null): boolean {
-  return role === 'super_admin' || role === 'user' || role === 'admin';
+  return isAdminLoginRole(role);
 }
 
 export function isCustomerRole(role?: string | null): boolean {

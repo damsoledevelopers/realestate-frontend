@@ -1,251 +1,223 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import {
-  AdvancedMarker,
-  Map,
-  Pin,
-  Polygon,
-  useMap,
-} from '@vis.gl/react-google-maps';
-import { MarkerClusterer } from '@googlemaps/markerclusterer';
-import { GOOGLE_MAPS_MAP_ID, hasValidCoordinates } from '@/lib/googleMaps';
-import { PROPERTY_TYPE_COLORS } from '@/lib/properties';
-import { LatLngPoint, MapProperty } from '@/lib/types';
+import Map, { Layer, Source, NavigationControl, FullscreenControl } from 'react-map-gl/maplibre';
+import type { MapLayerMouseEvent, MapRef } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import MapTypeToggle from '@/components/maps/MapTypeToggle';
 import PropertyDetailsPanel from '@/components/property/PropertyDetailsPanel';
+import {
+  buildPropertyMapGeoJson,
+  computeDefaultCenter,
+  computePropertyBounds,
+  getMapAttribution,
+  INTERACTIVE_LAYER_IDS,
+  MAP_MAX_ZOOM,
+  MAP_STYLES,
+  MapStyleId,
+  POINT_COLOR,
+  POLYGON_FILL_COLOR,
+  POLYGON_STROKE_COLOR,
+  POLYLINE_COLOR,
+} from '@/lib/maplibre';
+import { ensureMapLibreWorker } from '@/lib/maplibreWorker';
+import { MapProperty } from '@/lib/types';
+
+ensureMapLibreWorker();
 
 interface PropertyMapViewProps {
   properties: MapProperty[];
   className?: string;
   focusPropertyId?: string | null;
-}
-
-function FocusProperty({ property }: { property: MapProperty | null }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map || !property) return;
-
-    if (property.boundary && property.boundary.length >= 3) {
-      const bounds = new google.maps.LatLngBounds();
-      property.boundary.forEach((point) => bounds.extend(point));
-      map.fitBounds(bounds, { top: 64, right: 64, bottom: 64, left: 64 });
-      return;
-    }
-
-    map.panTo({ lat: property.latitude, lng: property.longitude });
-    map.setZoom(17);
-  }, [map, property]);
-
-  return null;
-}
-
-function FitBoundsToProperties({ properties }: { properties: MapProperty[] }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map || properties.length === 0) return;
-
-    const bounds = new google.maps.LatLngBounds();
-
-    properties.forEach((property) => {
-      if (property.boundary?.length) {
-        property.boundary.forEach((point) => bounds.extend(point));
-      } else if (hasValidCoordinates(property.latitude, property.longitude)) {
-        bounds.extend({ lat: property.latitude, lng: property.longitude });
-      }
-    });
-
-    if (!bounds.isEmpty()) {
-      map.fitBounds(bounds, { top: 48, right: 48, bottom: 48, left: 48 });
-    }
-  }, [map, properties]);
-
-  return null;
-}
-
-function PropertyPolygon({
-  property,
-  onSelect,
-}: {
-  property: MapProperty;
-  onSelect: (property: MapProperty) => void;
-}) {
-  const colors = PROPERTY_TYPE_COLORS[property.propertyType];
-  const paths = property.boundary as LatLngPoint[];
-
-  return (
-    <Polygon
-      paths={paths}
-      fillColor={colors.fill}
-      fillOpacity={0.35}
-      strokeColor={colors.stroke}
-      strokeOpacity={0.9}
-      strokeWeight={2}
-      clickable
-      onClick={() => onSelect(property)}
-    />
-  );
-}
-
-function PropertyPointMarker({
-  property,
-  selected,
-  onSelect,
-}: {
-  property: MapProperty;
-  selected: boolean;
-  onSelect: (property: MapProperty) => void;
-}) {
-  const colors = PROPERTY_TYPE_COLORS[property.propertyType];
-
-  return (
-    <AdvancedMarker
-      position={{ lat: property.latitude, lng: property.longitude }}
-      onClick={() => onSelect(property)}
-      title={property.name}
-      zIndex={selected ? 1000 : 1}
-    >
-      <Pin background={colors.marker} borderColor={colors.stroke} glyphColor="#ffffff" />
-    </AdvancedMarker>
-  );
-}
-
-function MarkerClusterLayer({
-  properties,
-  onSelect,
-}: {
-  properties: MapProperty[];
-  onSelect: (property: MapProperty) => void;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map || properties.length === 0) return;
-
-    const markers = properties.map((property) => {
-      const colors = PROPERTY_TYPE_COLORS[property.propertyType];
-      const pin = new google.maps.marker.PinElement({
-        background: colors.marker,
-        borderColor: colors.stroke,
-        glyphColor: '#ffffff',
-      });
-
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: { lat: property.latitude, lng: property.longitude },
-        title: property.name,
-        content: pin.element,
-      });
-
-      marker.addListener('click', () => onSelect(property));
-      return marker;
-    });
-
-    const clusterer = new MarkerClusterer({ map, markers });
-
-    return () => {
-      clusterer.clearMarkers();
-      markers.forEach((marker) => {
-        marker.map = null;
-      });
-    };
-  }, [map, properties, onSelect]);
-
-  return null;
+  /** When false, map is view-only (no details modal on click or focus). */
+  showDetailsPanel?: boolean;
 }
 
 export default function PropertyMapView({
   properties,
   className = '',
   focusPropertyId = null,
+  showDetailsPanel = true,
 }: PropertyMapViewProps) {
-  const focusProperty = useMemo(
-    () => properties.find((property) => property.id === focusPropertyId) ?? null,
-    [properties, focusPropertyId]
-  );
-
+  const mapRef = useRef<MapRef>(null);
+  const [mapStyleId, setMapStyleId] = useState<MapStyleId>('satellite');
   const [selectedProperty, setSelectedProperty] = useState<MapProperty | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  const geoJson = useMemo(() => buildPropertyMapGeoJson(properties), [properties]);
+  const defaultCenter = useMemo(() => computeDefaultCenter(properties), [properties]);
+  const useClustering = geoJson.points.features.length >= 25;
+
+  const fitToProperties = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    const bounds = computePropertyBounds(properties, focusPropertyId);
+    if (!bounds) return;
+
+    map.fitBounds(bounds, {
+      padding: 48,
+      maxZoom: MAP_MAX_ZOOM,
+      duration: focusPropertyId ? 400 : 0,
+    });
+  }, [properties, focusPropertyId]);
 
   useEffect(() => {
-    if (focusProperty) {
-      setSelectedProperty(focusProperty);
-    }
-  }, [focusProperty]);
+    if (!mapReady) return;
+    fitToProperties();
+  }, [mapReady, fitToProperties, mapStyleId]);
 
-  const handleSelect = useCallback((property: MapProperty) => {
-    setSelectedProperty(property);
-  }, []);
+  const findPropertyById = useCallback(
+    (id: string | undefined) => properties.find((property) => property.id === id) ?? null,
+    [properties]
+  );
 
-  const { polygonProperties, pointProperties } = useMemo(() => {
-    const polygons: MapProperty[] = [];
-    const points: MapProperty[] = [];
+  const handleMapClick = useCallback(
+    (event: MapLayerMouseEvent) => {
+      if (!showDetailsPanel) return;
 
-    properties.forEach((property) => {
-      if (property.boundary && property.boundary.length >= 3) {
-        polygons.push(property);
-      } else if (hasValidCoordinates(property.latitude, property.longitude)) {
-        points.push(property);
+      const feature = event.features?.[0];
+      if (!feature) {
+        setSelectedProperty(null);
+        return;
       }
-    });
 
-    return { polygonProperties: polygons, pointProperties: points };
-  }, [properties]);
+      const property = findPropertyById(String(feature.properties?.id ?? ''));
+      if (property) setSelectedProperty(property);
+    },
+    [findPropertyById, showDetailsPanel]
+  );
 
-  const defaultCenter = useMemo(() => {
-    if (properties.length === 0) return { lat: 20.5937, lng: 78.9629 };
-    const lat =
-      properties.reduce((sum, property) => sum + property.latitude, 0) / properties.length;
-    const lng =
-      properties.reduce((sum, property) => sum + property.longitude, 0) / properties.length;
-    return { lat, lng };
-  }, [properties]);
-
-  const useClustering = pointProperties.length >= 25;
+  const handleMouseMove = useCallback(
+    (event: MapLayerMouseEvent) => {
+      if (!showDetailsPanel) return;
+      const canvas = mapRef.current?.getMap()?.getCanvas();
+      if (!canvas) return;
+      canvas.style.cursor = event.features?.length ? 'pointer' : '';
+    },
+    [showDetailsPanel]
+  );
 
   return (
     <>
       <div className={`relative overflow-hidden rounded-xl border border-gray-200 ${className}`}>
         <Map
-          defaultCenter={defaultCenter}
-          defaultZoom={properties.length === 1 ? 15 : 7}
-          mapId={GOOGLE_MAPS_MAP_ID}
-          gestureHandling="cooperative"
-          fullscreenControl
-          zoomControl
-          mapTypeControl
-          streetViewControl={false}
+          ref={mapRef}
+          mapStyle={MAP_STYLES[mapStyleId]}
+          initialViewState={{
+            longitude: defaultCenter.lng,
+            latitude: defaultCenter.lat,
+            zoom: properties.length === 1 ? 16 : 7,
+          }}
           style={{ width: '100%', height: '100%', minHeight: '420px' }}
+          maxZoom={MAP_MAX_ZOOM}
+          interactiveLayerIds={showDetailsPanel ? [...INTERACTIVE_LAYER_IDS] : []}
+          onClick={handleMapClick}
+          onMouseMove={handleMouseMove}
+          onLoad={() => {
+            setMapReady(true);
+            fitToProperties();
+          }}
+          attributionControl={false}
           reuseMaps
-          onClick={() => setSelectedProperty(null)}
         >
-          {focusProperty ? (
-            <FocusProperty property={focusProperty} />
-          ) : (
-            <FitBoundsToProperties properties={properties} />
-          )}
+          <NavigationControl position="top-right" showCompass={false} />
+          <FullscreenControl position="top-right" />
 
-          {polygonProperties.map((property) => (
-            <PropertyPolygon key={property.id} property={property} onSelect={handleSelect} />
-          ))}
-
-          {useClustering ? (
-            <MarkerClusterLayer properties={pointProperties} onSelect={handleSelect} />
-          ) : (
-            pointProperties.map((property) => (
-              <PropertyPointMarker
-                key={property.id}
-                property={property}
-                selected={selectedProperty?.id === property.id}
-                onSelect={handleSelect}
+          {geoJson.polygons.features.length > 0 ? (
+            <Source id="property-polygons" type="geojson" data={geoJson.polygons}>
+              <Layer
+                id="property-polygons-fill"
+                type="fill"
+                paint={{
+                  'fill-color': POLYGON_FILL_COLOR,
+                  'fill-opacity': 0.35,
+                }}
               />
-            ))
-          )}
+              <Layer
+                id="property-polygons-outline"
+                type="line"
+                paint={{
+                  'line-color': POLYGON_STROKE_COLOR,
+                  'line-width': 2,
+                  'line-opacity': 0.9,
+                }}
+              />
+            </Source>
+          ) : null}
+
+          {geoJson.polylines.features.length > 0 ? (
+            <Source id="property-polylines" type="geojson" data={geoJson.polylines}>
+              <Layer
+                id="property-polylines"
+                type="line"
+                paint={{
+                  'line-color': POLYLINE_COLOR,
+                  'line-width': 2,
+                  'line-opacity': 0.95,
+                }}
+                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              />
+            </Source>
+          ) : null}
+
+          {geoJson.points.features.length > 0 ? (
+            <Source
+              id="property-points"
+              type="geojson"
+              data={geoJson.points}
+              cluster={useClustering}
+              clusterMaxZoom={14}
+              clusterRadius={50}
+            >
+              {useClustering ? (
+                <>
+                  <Layer
+                    id="property-clusters"
+                    type="circle"
+                    filter={['has', 'point_count']}
+                    paint={{
+                      'circle-color': '#2563eb',
+                      'circle-radius': ['step', ['get', 'point_count'], 18, 10, 22, 25, 28],
+                      'circle-opacity': 0.85,
+                    }}
+                  />
+                  <Layer
+                    id="property-cluster-count"
+                    type="symbol"
+                    filter={['has', 'point_count']}
+                    layout={{
+                      'text-field': '{point_count_abbreviated}',
+                      'text-size': 12,
+                    }}
+                    paint={{ 'text-color': '#ffffff' }}
+                  />
+                </>
+              ) : null}
+              <Layer
+                id="property-points"
+                type="circle"
+                {...(useClustering ? { filter: ['!', ['has', 'point_count']] as const } : {})}
+                paint={{
+                  'circle-color': POINT_COLOR,
+                  'circle-radius': 8,
+                  'circle-stroke-color': '#ffffff',
+                  'circle-stroke-width': 2,
+                }}
+              />
+            </Source>
+          ) : null}
         </Map>
+
+        <MapTypeToggle mapStyleId={mapStyleId} onChange={setMapStyleId} />
+
+        <div className="pointer-events-none absolute bottom-1 right-2 rounded bg-white/80 px-1.5 py-0.5 text-[10px] text-gray-600">
+          {getMapAttribution(mapStyleId)}
+        </div>
       </div>
 
-      {selectedProperty && (
+      {showDetailsPanel && selectedProperty ? (
         <PropertyDetailsPanel
           property={selectedProperty}
           onClose={() => setSelectedProperty(null)}
@@ -261,7 +233,7 @@ export default function PropertyMapView({
             ) : undefined
           }
         />
-      )}
+      ) : null}
     </>
   );
 }

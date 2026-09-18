@@ -9,6 +9,7 @@ import StatusBadge from '@/components/property/StatusBadge';
 import ConstructionStatusBadge from '@/components/plots/ConstructionStatusBadge';
 import ViewOnGoogleMapsButton from '@/components/property/ViewOnGoogleMapsButton';
 import ShareLocationButton from '@/components/property/ShareLocationButton';
+import PropertyMapView from '@/components/maps/PropertyMapView';
 import ExternalLinksPublicSection from '@/components/externalLinks/ExternalLinksPublicSection';
 import { mapPropertyToGisDetails } from '@/lib/propertyDetails';
 import { resolveContactTarget } from '@/lib/propertyContacts';
@@ -81,7 +82,28 @@ export default function PropertyDetailsPanel({ property, onClose, footer }: Prop
         </div>
 
         <div className="mt-6 flex flex-col gap-3">
-          <ViewOnGoogleMapsButton latitude={property.latitude} longitude={property.longitude} />
+          {property.boundary && property.boundary.length >= 3 ? (
+            <PropertyMapView
+              properties={[property]}
+              focusPropertyId={property.id}
+              className="h-56 w-full rounded-xl"
+              showDetailsPanel={false}
+            />
+          ) : property.polylines && property.polylines.length > 0 ? (
+            <PropertyMapView
+              properties={[property]}
+              focusPropertyId={property.id}
+              className="h-56 w-full rounded-xl"
+              showDetailsPanel={false}
+            />
+          ) : null}
+          <ViewOnGoogleMapsButton
+            latitude={property.latitude}
+            longitude={property.longitude}
+            boundary={property.boundary}
+            polylines={property.polylines}
+            layoutId={property.linkedLayoutId}
+          />
           <ShareLocationButton
             latitude={property.latitude}
             longitude={property.longitude}

@@ -39,6 +39,7 @@ export default function LayoutFormModal({
   const [newImages, setNewImages] = useState<File[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
   const [qrImage, setQrImage] = useState<File | null>(null);
+  const [layoutFile, setLayoutFile] = useState<File | null>(null);
   const [savingLayout, setSavingLayout] = useState(false);
 
   useEffect(() => {
@@ -60,6 +61,7 @@ export default function LayoutFormModal({
     setNewImages([]);
     setNewImagePreviews([]);
     setQrImage(null);
+    setLayoutFile(null);
   }, [open, initialLayout, editingLayoutId]);
 
   const clearNewImagePreviews = () => {
@@ -101,6 +103,7 @@ export default function LayoutFormModal({
     if (editingLayoutId) formData.append('keepImages', JSON.stringify(existingImages));
     newImages.forEach((file) => formData.append('images', file));
     if (qrImage) formData.append('qrImage', qrImage);
+    if (layoutFile) formData.append('layoutFile', layoutFile);
 
     try {
       if (editingLayoutId) {
@@ -187,6 +190,20 @@ export default function LayoutFormModal({
           <div>
             <label className="mb-1 block text-xs font-medium">{t('layoutForm.images')}</label>
             <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="input-field" onChange={(e) => { addLayoutImages(e.target.files); e.target.value = ''; }} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">{t('layoutForm.layoutFile')}</label>
+            <input
+              type="file"
+              accept=".xml,.aml,.kml,application/xml,text/xml"
+              className="input-field"
+              onChange={(e) => setLayoutFile(e.target.files?.[0] || null)}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              {editingLayoutId
+                ? 'Optional: re-upload KML/XML to refresh layout lines on the map (large files are simplified automatically).'
+                : t('layoutForm.layoutFileHint')}
+            </p>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium">{t('layoutForm.qrImage')}</label>

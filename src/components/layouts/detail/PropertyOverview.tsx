@@ -15,17 +15,17 @@ interface PropertyOverviewProps {
 
 const OVERVIEW_ITEMS = [
   { key: 'status', label: 'Project Status', icon: StatusIcon },
+  { key: 'total', label: 'Registered Plots', icon: TotalIcon },
   { key: 'available', label: 'Available Plots', icon: AvailableIcon },
+  { key: 'booked', label: 'Booked Plots', icon: BookedIcon },
   { key: 'sold', label: 'Sold Plots', icon: SoldIcon },
-  { key: 'total', label: 'Total Plots', icon: TotalIcon },
   { key: 'price', label: 'Starting Price', icon: PriceIcon },
   { key: 'size', label: 'Plot Size Range', icon: SizeIcon },
   { key: 'possession', label: 'Possession Status', icon: PossessionIcon },
-  { key: 'rera', label: 'RERA Status', icon: ReraIcon },
 ] as const;
 
 export default function PropertyOverview({ layout, plots }: PropertyOverviewProps) {
-  const { total, available, sold } = getPlotCounts(layout, plots);
+  const { total, available, booked, sold } = getPlotCounts(layout, plots);
   const sizeRange = getPlotSizeRange(plots);
 
   const values: Record<string, React.ReactNode> = {
@@ -36,6 +36,7 @@ export default function PropertyOverview({ layout, plots }: PropertyOverviewProp
       </span>
     ),
     available: <CountUp end={available} />,
+    booked: <CountUp end={booked} />,
     sold: <CountUp end={sold} />,
     total: <CountUp end={total} />,
     price: layout.startingPrice != null ? formatPrice(layout.startingPrice) : 'On Request',
@@ -89,6 +90,14 @@ function AvailableIcon() {
   return (
     <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+function BookedIcon() {
+  return (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }

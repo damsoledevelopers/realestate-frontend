@@ -38,6 +38,8 @@ const emptyPlot = {
   facing: 'North' as const,
   constructionStatus: 'empty_plot' as ConstructionStatus,
   description: '',
+  sellerName: '',
+  sellerPhone: '',
   coordinates: { x: 10, y: 10 },
 };
 
@@ -146,7 +148,16 @@ export default function LayoutPropertiesPanel({ layout, onUpdated }: LayoutPrope
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-gray-900">Plots & linked properties</h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Plots & linked properties</h3>
+          {layout.importedPlots?.length ? (
+            <p className="mt-1 text-xs text-gray-500">
+              {layout.importedPlots.length} plot boundaries found in the layout file (map only). They are not
+              listed for sale until you click Add Plot and register each one. Sale counts use registered plots
+              only.
+            </p>
+          ) : null}
+        </div>
         {canManage && (
           <button
             type="button"
@@ -378,9 +389,11 @@ export default function LayoutPropertiesPanel({ layout, onUpdated }: LayoutPrope
       {showPlotForm && (
         <div className="modal-overlay">
           <form onSubmit={savePlot} className="modal-panel-md">
-            <h2 className="text-lg font-semibold">Add Plot</h2>
+            <h2 className="text-lg font-semibold">Add Plot for Sale</h2>
             <div className="mt-4 space-y-3">
-              <input className="input-field" placeholder="Plot number" value={plotForm.plotNumber} onChange={(e) => setPlotForm({ ...plotForm, plotNumber: e.target.value })} required />
+              <input className="input-field" placeholder="Plot number (must match imported plot #)" value={plotForm.plotNumber} onChange={(e) => setPlotForm({ ...plotForm, plotNumber: e.target.value })} required />
+              <input className="input-field" placeholder="Land owner name (internal note)" value={plotForm.sellerName} onChange={(e) => setPlotForm({ ...plotForm, sellerName: e.target.value })} />
+              <input className="input-field" placeholder="Land owner phone (internal note)" value={plotForm.sellerPhone} onChange={(e) => setPlotForm({ ...plotForm, sellerPhone: e.target.value })} />
               <input className="input-field" placeholder="Size" value={plotForm.size} onChange={(e) => setPlotForm({ ...plotForm, size: e.target.value })} required />
               <input className="input-field" type="number" placeholder="Price (optional)" value={plotForm.price} onChange={(e) => setPlotForm({ ...plotForm, price: e.target.value })} />
               <div className="form-grid">

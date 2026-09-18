@@ -1,43 +1,34 @@
 'use client';
 
-import { useMap } from '@vis.gl/react-google-maps';
-import { useState } from 'react';
+import { MapStyleId, MAP_STYLE_LABELS } from '@/lib/maplibre';
 
-type MapTypeId = 'roadmap' | 'satellite';
+interface MapTypeToggleProps {
+  mapStyleId: MapStyleId;
+  onChange: (styleId: MapStyleId) => void;
+  styles?: MapStyleId[];
+}
 
-export default function MapTypeToggle() {
-  const map = useMap();
-  const [mapType, setMapType] = useState<MapTypeId>('roadmap');
-
-  const handleChange = (type: MapTypeId) => {
-    map?.setMapTypeId(type);
-    setMapType(type);
-  };
-
+export default function MapTypeToggle({
+  mapStyleId,
+  onChange,
+  styles = ['street', 'satellite'],
+}: MapTypeToggleProps) {
   return (
     <div className="absolute left-3 top-3 z-10 flex overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md">
-      <button
-        type="button"
-        onClick={() => handleChange('roadmap')}
-        className={`px-3 py-1.5 text-xs font-medium transition ${
-          mapType === 'roadmap'
-            ? 'bg-primary-600 text-white'
-            : 'text-gray-600 hover:bg-gray-50'
-        }`}
-      >
-        Roadmap
-      </button>
-      <button
-        type="button"
-        onClick={() => handleChange('satellite')}
-        className={`px-3 py-1.5 text-xs font-medium transition ${
-          mapType === 'satellite'
-            ? 'bg-primary-600 text-white'
-            : 'text-gray-600 hover:bg-gray-50'
-        }`}
-      >
-        Satellite
-      </button>
+      {styles.map((styleId) => (
+        <button
+          key={styleId}
+          type="button"
+          onClick={() => onChange(styleId)}
+          className={`px-4 py-2 text-sm font-semibold transition ${
+            mapStyleId === styleId
+              ? 'bg-primary-600 text-white'
+              : 'text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          {MAP_STYLE_LABELS[styleId]}
+        </button>
+      ))}
     </div>
   );
 }

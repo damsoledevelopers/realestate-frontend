@@ -162,13 +162,10 @@ export default function Navbar() {
             ) : (
               <>
                 <Link href="/login" className={mobileSignInClass}>
-                  {t('nav.login')}
+                  Admin Login
                 </Link>
                 <Link href="/login" className={signInClass}>
-                  {t('nav.login')}
-                </Link>
-                <Link href="/register" className={registerClass}>
-                  {t('nav.getStarted')}
+                  Admin Login
                 </Link>
               </>
             )}
@@ -252,22 +249,13 @@ export default function Navbar() {
                 </>
               )}
               {!user && (
-                <>
-                  <Link
-                    href="/login"
-                    className="rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {t('nav.login')}
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="btn-primary mt-2 text-center text-sm"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {t('nav.getStarted')}
-                  </Link>
-                </>
+                <Link
+                  href="/login"
+                  className="rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Admin Login
+                </Link>
               )}
               <LanguageSwitcher variant="field" className="mt-2" />
             </div>

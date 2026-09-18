@@ -9,11 +9,11 @@ import { useMapProperties } from '@/hooks/useMapProperties';
 import { useLocale } from '@/context/LocaleContext';
 import {
   enrichMapPropertiesWithAddress,
+  enrichMapPropertiesWithLayoutBoundaries,
   mergeMapPropertiesWithLayouts,
   propertyToMapProperty,
 } from '@/lib/propertyDetails';
 import { ALL_PROPERTY_TYPES } from '@/lib/properties';
-import { getGoogleMapsApiKey } from '@/lib/googleMaps';
 import { Layout, MapProperty, Property, PropertyType } from '@/lib/types';
 
 interface PropertyMapSectionProps {
@@ -30,20 +30,18 @@ function toMapPropertyRows(properties: MapProperty[]): MapProperty[] {
       description: '',
       isActive: true,
       boundaryPath: property.boundary,
+      mapLinesPath: property.polylines,
     } as Property)
   );
 }
 
 export default function PropertyMapSection({ className = '', layouts: layoutsProp }: PropertyMapSectionProps) {
   const { t, locale } = useLocale();
-  const apiKey = getGoogleMapsApiKey();
   const { data: fetchedLayouts = [], isLoading: layoutsLoading } = useLayouts('active', {
     enabled: !layoutsProp,
   });
   const layouts = layoutsProp ?? fetchedLayouts;
-  const { properties: mapApiProperties, loading: mapLoading } = useMapProperties({
-    enabled: Boolean(apiKey),
-  });
+  const { properties: mapApiProperties, loading: mapLoading } = useMapProperties();
 
   const [activeTypes, setActiveTypes] = useState<Set<PropertyType>>(
     () => new Set(ALL_PROPERTY_TYPES)
@@ -52,7 +50,8 @@ export default function PropertyMapSection({ className = '', layouts: layoutsPro
   const mergedProperties = useMemo(() => {
     const fromApi = toMapPropertyRows(mapApiProperties);
     const merged = mergeMapPropertiesWithLayouts(fromApi, layouts, locale);
-    return enrichMapPropertiesWithAddress(merged, layouts);
+    const withBoundaries = enrichMapPropertiesWithLayoutBoundaries(merged, layouts);
+    return enrichMapPropertiesWithAddress(withBoundaries, layouts);
   }, [mapApiProperties, layouts, locale]);
 
   const counts = useMemo(() => {
@@ -90,13 +89,9 @@ export default function PropertyMapSection({ className = '', layouts: layoutsPro
     setActiveTypes(new Set());
   }, []);
 
-  if (!apiKey) {
-    return null;
-  }
-
   return (
     <section className={`min-w-0 overflow-hidden ${className}`}>
-      <h2 className="text-xl font-semibold text-gray-900">{t('map.exploreTitle')}</h2>
+      {/* <h2 className="text-xl font-semibold text-gray-900">{t('map.exploreTitle')}</h2> */}
       <p className="mt-1 text-sm text-gray-500">{t('map.exploreSubtitle')}</p>
 
       {!isLoading && mergedProperties.length === 0 && (

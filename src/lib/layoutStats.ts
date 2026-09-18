@@ -1,13 +1,24 @@
 import { Layout, Plot } from '@/lib/types';
 
+/** Counts come only from Admin-registered Plot records — never from KML importedPlots. */
 export function getPlotCounts(layout: Layout, plots: Plot[]) {
-  const total = layout.plotStats?.total ?? layout.totalPlots ?? plots.length;
-  const available =
-    layout.plotStats?.available ?? plots.filter((p) => p.status === 'available').length;
-  const booked = layout.plotStats?.booked ?? plots.filter((p) => p.status === 'booked').length;
-  const sold = layout.plotStats?.sold ?? plots.filter((p) => p.status === 'sold').length;
+  if (layout.plotStats) {
+    return {
+      total: layout.plotStats.total ?? plots.length,
+      available: layout.plotStats.available ?? 0,
+      booked: layout.plotStats.booked ?? 0,
+      sold: layout.plotStats.sold ?? 0,
+      reserved: layout.plotStats.reserved ?? 0,
+    };
+  }
 
-  return { total, available, booked, sold };
+  return {
+    total: plots.length,
+    available: plots.filter((p) => p.status === 'available').length,
+    booked: plots.filter((p) => p.status === 'booked').length,
+    sold: plots.filter((p) => p.status === 'sold').length,
+    reserved: plots.filter((p) => p.status === 'reserved').length,
+  };
 }
 
 export function getPlotSizeRange(plots: Plot[]): string {

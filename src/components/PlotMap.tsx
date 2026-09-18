@@ -11,6 +11,7 @@ import { normalizeConstructionStatus } from '@/lib/constructionStatusConfig';
 import PlotHatchingOverlay, {
   ConstructionHatchLegendSwatch,
 } from '@/components/plots/PlotHatchingOverlay';
+import PlotLocationMap from '@/components/maps/PlotLocationMap';
 import { useLocale } from '@/context/LocaleContext';
 
 type PlotFilter = 'all' | 'available' | 'booked' | 'sold' | 'reserved';
@@ -23,6 +24,9 @@ interface PlotMapProps {
   layoutCoordinates?: { lat?: number; lng?: number };
   plots: Plot[];
   onBookNow?: (plot: Plot) => void;
+  onEnquire?: (plot: Plot) => void;
+  highlightPlotId?: string | null;
+  showPlotLocationMap?: boolean;
 }
 
 function ZoomControls({
@@ -78,6 +82,9 @@ export default function PlotMap({
   layoutCoordinates,
   plots,
   onBookNow,
+  onEnquire,
+  highlightPlotId = null,
+  showPlotLocationMap = false,
 }: PlotMapProps) {
   const { t } = useLocale();
   const { getDefinition, getMapMarkerStyle, isBookable } = usePropertyStatusConfig();
@@ -93,6 +100,12 @@ export default function PlotMap({
   useEffect(() => {
     setImageError(false);
   }, [layoutImage]);
+
+  useEffect(() => {
+    if (!highlightPlotId) return;
+    const plot = plots.find((item) => item._id === highlightPlotId);
+    if (plot) setPopupPlot(plot);
+  }, [highlightPlotId, plots]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
@@ -130,6 +143,11 @@ export default function PlotMap({
   const handleBookNow = (plot: Plot) => {
     setPopupPlot(null);
     onBookNow?.(plot);
+  };
+
+  const handleEnquire = (plot: Plot) => {
+    setPopupPlot(null);
+    onEnquire?.(plot);
   };
 
   return (
@@ -238,7 +256,7 @@ export default function PlotMap({
                     className={`relative flex items-center justify-center overflow-hidden rounded border-2 font-semibold text-white shadow-sm transition duration-200 hover:scale-110 ${
                       showLayoutImage ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-7 min-w-7 px-1 text-[9px] sm:h-8 sm:min-w-8 sm:text-[10px]'
                     } ${
-                      popupPlot?._id === plot._id
+                      popupPlot?._id === plot._id || highlightPlotId === plot._id
                         ? 'z-10 scale-125 ring-2 ring-accent ring-offset-1'
                         : ''
                     }`}
@@ -293,11 +311,35 @@ export default function PlotMap({
           })}
           onClose={() => setPopupPlot(null)}
           footer={
-            isBookable(popupPlot.status) && onBookNow ? (
-              <button type="button" onClick={() => handleBookNow(popupPlot)} className="btn-primary w-full">
-                {t('plotMap.bookNow')}
-              </button>
-            ) : undefined
+            <div className="space-y-4">
+              <div className="rounded-xl bg-primary-50 px-4 py-3 ring-1 ring-primary-100">
+                <p className="text-sm font-semibold text-primary-900">
+                  {t('plotMap.contactAdminTitle')}
+                </p>
+                <p className="mt-1 text-sm text-primary-800/80">
+                  {t('plotMap.contactAdminHint')}
+                </p>
+              </div>
+
+              {showPlotLocationMap ? (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {t('plotMap.viewOnMap')}
+                  </p>
+                  <PlotLocationMap plotId={popupPlot._id} />
+                </div>
+              ) : null}
+
+              {onEnquire ? (
+                <button type="button" onClick={() => handleEnquire(popupPlot)} className="btn-primary w-full">
+                  {t('plotMap.submitEnquiry')}
+                </button>
+              ) : isBookable(popupPlot.status) && onBookNow ? (
+                <button type="button" onClick={() => handleBookNow(popupPlot)} className="btn-primary w-full">
+                  {t('plotMap.bookNow')}
+                </button>
+              ) : undefined}
+            </div>
           }
         />
       )}

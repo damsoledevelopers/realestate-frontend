@@ -174,14 +174,37 @@ export interface Layout extends PropertyGisFields {
   partnerCount?: number;
   ownerName?: string;
   ownerEmail?: string;
+  layoutFileName?: string;
+  importedPlots?: Array<{
+    plotNumber: string;
+    size?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    coordinates?: { x: number; y: number };
+    boundary?: {
+      type?: string;
+      coordinates?: number[][][];
+    } | null;
+    boundaryPath?: LatLngPoint[] | null;
+  }>;
   availablePlots?: number;
   startingPrice?: number | null;
   price?: number | null;
   plotStats?: PlotStats;
+  linkedPropertyCounts?: {
+    farm?: number;
+    land?: number;
+    bungalow?: number;
+    row_house?: number;
+  };
   plots?: Plot[];
   contactUser?: PropertyContactUser | null;
   contactAssignment?: PropertyContactAssignmentMeta | null;
   mapCoordinates?: { lat: number; lng: number } | null;
+  boundaryPath?: LatLngPoint[] | null;
+  mapLinesPath?: LatLngPoint[][] | null;
+  hasMapGeoJson?: boolean;
+  mapLineCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -218,6 +241,13 @@ export interface Plot extends PropertyGisFields {
   constructionStatus?: 'empty_plot' | 'under_construction' | 'construction_completed';
   coordinates: { x: number; y: number };
   mapCoordinates?: { lat: number; lng: number } | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  sellerName?: string;
+  sellerPhone?: string;
+  sellerCustomerId?: string | null;
+  boundaryPath?: LatLngPoint[] | null;
+  mapLinesPath?: LatLngPoint[][] | null;
   description: string;
 }
 
@@ -807,6 +837,7 @@ export interface MapProperty {
   latitude: number;
   longitude: number;
   boundary: LatLngPoint[] | null;
+  polylines?: LatLngPoint[][] | null;
   parentPropertyId: string | null;
   linkedLayoutId?: string | null;
   linkedPlotId?: string | null;
@@ -824,6 +855,7 @@ export interface Property extends MapProperty {
   description: string;
   isActive: boolean;
   boundaryPath: LatLngPoint[] | null;
+  mapLinesPath?: LatLngPoint[][] | null;
   linkedLayoutId?: string | null;
   linkedPlotId?: string | null;
   createdBy?: string | { _id: string };

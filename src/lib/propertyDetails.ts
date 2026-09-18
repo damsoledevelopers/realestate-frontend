@@ -60,6 +60,39 @@ export function enrichMapPropertiesWithAddress(
   }));
 }
 
+/** Fill missing layout polygons/polylines from layout records (e.g. after KML import before re-sync). */
+export function enrichMapPropertiesWithLayoutBoundaries(
+  properties: MapProperty[],
+  layouts: Layout[]
+): MapProperty[] {
+  const boundaryByLayoutId = new Map(
+    layouts
+      .filter((layout) => layout.boundaryPath && layout.boundaryPath.length >= 3)
+      .map((layout) => [layout._id, layout.boundaryPath as NonNullable<Layout['boundaryPath']>])
+  );
+  const polylinesByLayoutId = new Map(
+    layouts
+      .filter((layout) => layout.mapLinesPath && layout.mapLinesPath.length > 0)
+      .map((layout) => [layout._id, layout.mapLinesPath as NonNullable<Layout['mapLinesPath']>])
+  );
+
+  return properties.map((property) => {
+    const layoutId = property.linkedLayoutId || (property.propertyType === 'layout' ? property.id : null);
+    if (!layoutId) return property;
+
+    let next = property;
+    if (!(property.boundary && property.boundary.length >= 3)) {
+      const boundary = boundaryByLayoutId.get(layoutId);
+      if (boundary) next = { ...next, boundary };
+    }
+    if (!property.polylines?.length) {
+      const polylines = polylinesByLayoutId.get(layoutId);
+      if (polylines?.length) next = { ...next, polylines };
+    }
+    return next;
+  });
+}
+
 /** Include dashboard layouts on the public map when they are not already synced as properties. */
 export function mergeMapPropertiesWithLayouts(
   properties: MapProperty[],
@@ -140,7 +173,8 @@ export function plotToMapProperty(plot: Plot, context: PlotToMapPropertyContext)
     constructionStatus: normalizeConstructionStatus(plot.constructionStatus),
     latitude: lat,
     longitude: lng,
-    boundary: null,
+    boundary: plot.boundaryPath ?? null,
+    polylines: plot.mapLinesPath?.length ? plot.mapLinesPath : null,
     parentPropertyId: context.layoutId,
     linkedLayoutId: context.layoutId,
     linkedPlotId: plot._id,
@@ -173,7 +207,8 @@ export function layoutToMapProperty(layout: Layout, locale: AppLocale = 'en'): M
     status: layout.status === 'active' ? 'active' : 'inactive',
     latitude: lat as number,
     longitude: lng as number,
-    boundary: null,
+    boundary: layout.boundaryPath ?? null,
+    polylines: layout.mapLinesPath?.length ? layout.mapLinesPath : null,
     parentPropertyId: null,
     linkedLayoutId: layout._id,
     address: getLocalizedLocation(layout.location?.trim() || '', locale, layout.locationMr) || null,
@@ -193,6 +228,7 @@ export function propertyToMapProperty(property: Property): MapProperty {
     latitude: property.latitude,
     longitude: property.longitude,
     boundary: property.boundary ?? property.boundaryPath,
+    polylines: property.polylines ?? property.mapLinesPath ?? null,
     parentPropertyId: property.parentPropertyId,
     linkedLayoutId: property.linkedLayoutId,
     linkedPlotId: property.linkedPlotId,

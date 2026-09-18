@@ -133,9 +133,9 @@ export default function LayoutsPageContent() {
       {/* Main Page Content Body */}
       <div className="mx-auto w-full min-w-0 max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8 space-y-8">
         {/* Interactive Property Map Section */}
-        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+        {/* <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
           <PropertyMapSection className="mb-8 sm:mb-10 transition-all duration-300 hover:shadow-md" layouts={layouts} />
-        </div>
+        </div> */}
 
         {/* Filters Bar Container */}
         <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-200/80 bg-white p-3 sm:p-5 shadow-sm transition-all duration-300 hover:border-gray-300 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -1,33 +1,52 @@
 'use client';
 
-import { getGoogleMapsExternalUrl, hasValidCoordinates } from '@/lib/googleMaps';
+import {
+  getViewOnMapUrl,
+  hasMapGeometry,
+  hasValidCoordinates,
+} from '@/lib/googleMaps';
+import { LatLngPoint } from '@/lib/types';
 import { useLocale } from '@/context/LocaleContext';
 
 interface ViewOnGoogleMapsButtonProps {
   latitude?: number | null;
   longitude?: number | null;
+  boundary?: LatLngPoint[] | null;
+  polylines?: LatLngPoint[][] | null;
+  layoutId?: string | null;
+  hasMapGeoJson?: boolean;
   label?: string;
   className?: string;
   fullWidth?: boolean;
 }
 
-function buildGoogleMapsUrl(latitude?: number | null, longitude?: number | null): string | null {
-  return getGoogleMapsExternalUrl(latitude, longitude);
-}
-
 export default function ViewOnGoogleMapsButton({
   latitude,
   longitude,
+  boundary = null,
+  polylines = null,
+  layoutId = null,
+  hasMapGeoJson = false,
   label,
   className = '',
   fullWidth = true,
 }: ViewOnGoogleMapsButtonProps) {
   const { t } = useLocale();
+  const usesInteractiveMap = Boolean(
+    layoutId && hasMapGeometry(boundary, polylines, hasMapGeoJson)
+  );
   const buttonLabel = label || t('property.viewOnMaps');
-  const mapsUrl = buildGoogleMapsUrl(latitude, longitude);
+  const mapsUrl = getViewOnMapUrl({
+    latitude,
+    longitude,
+    boundary,
+    polylines,
+    layoutId,
+    hasMapGeoJson,
+  });
   const hasCoords = hasValidCoordinates(latitude, longitude);
 
-  if (!hasCoords || !mapsUrl) {
+  if ((!hasCoords && !usesInteractiveMap) || !mapsUrl) {
     return (
       <div className={fullWidth ? 'w-full' : ''}>
         <button
@@ -46,8 +65,8 @@ export default function ViewOnGoogleMapsButton({
   return (
     <a
       href={mapsUrl}
-      target="_blank"
-      rel="noopener noreferrer"
+      target={usesInteractiveMap ? '_self' : '_blank'}
+      rel={usesInteractiveMap ? undefined : 'noopener noreferrer'}
       className={`btn-primary inline-flex items-center justify-center gap-2 ${fullWidth ? 'w-full' : ''} ${className}`}
     >
       <MapPinIcon />

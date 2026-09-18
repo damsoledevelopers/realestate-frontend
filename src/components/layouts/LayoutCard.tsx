@@ -21,6 +21,10 @@ export default function LayoutCard({ layout }: LayoutCardProps) {
   const primaryImage = getHeroImage(layout);
   const total = layout.plotStats?.total ?? layout.totalPlots ?? 0;
   const available = layout.plotStats?.available ?? layout.availablePlots ?? 0;
+  const booked = layout.plotStats?.booked ?? 0;
+  const sold = layout.plotStats?.sold ?? 0;
+  const landCount = layout.linkedPropertyCounts?.land ?? 0;
+  const farmCount = layout.linkedPropertyCounts?.farm ?? 0;
 
   return (
     <article className="group relative flex h-full min-w-0 w-full max-w-full flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-2 hover:border-primary-300 hover:shadow-2xl hover:shadow-primary-900/10">
@@ -100,6 +104,26 @@ export default function LayoutCard({ layout }: LayoutCardProps) {
             <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 ring-1 ring-inset ring-primary-600/15 transition-all duration-200 group-hover:bg-primary-100 group-hover:shadow-sm">
               {available} / {total} {t('layouts.plotsAvailable')}
             </span>
+            {landCount > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-600/15">
+                {landCount} {t('property.type.land')}
+              </span>
+            ) : null}
+            {farmCount > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-lime-50 px-3 py-1 text-xs font-semibold text-lime-800 ring-1 ring-inset ring-lime-600/15">
+                {farmCount} {t('property.type.farm')}
+              </span>
+            ) : null}
+            {booked > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-yellow-50 px-3 py-1 text-xs font-semibold text-yellow-800 ring-1 ring-inset ring-yellow-600/15">
+                {booked} {t('common.booked')}
+              </span>
+            ) : null}
+            {sold > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/15">
+                {sold} {t('common.sold')}
+              </span>
+            ) : null}
           </div>
         </div>
 

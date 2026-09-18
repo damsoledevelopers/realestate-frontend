@@ -9,10 +9,13 @@ import InquiryRecaptcha from '@/components/contact/InquiryRecaptcha';
 import AnimatedSection from '@/components/layouts/detail/AnimatedSection';
 import SectionHeading from '@/components/layouts/detail/SectionHeading';
 import { useLocale } from '@/context/LocaleContext';
+import { Plot } from '@/lib/types';
 
 interface LayoutInquiryFormProps {
   layoutName: string;
   defaultSubject?: string;
+  selectedPlot?: Plot | null;
+  onClearPlot?: () => void;
 }
 
 const listContainerVariants: Variants = {
@@ -60,6 +63,8 @@ const formFieldVariants: Variants = {
 export default function LayoutInquiryForm({
   layoutName,
   defaultSubject = 'Plot Inquiry',
+  selectedPlot = null,
+  onClearPlot,
 }: LayoutInquiryFormProps) {
   const { t } = useLocale();
   const [loading, setLoading] = useState(false);
@@ -77,9 +82,11 @@ export default function LayoutInquiryForm({
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
-      message: t('detail.inquiry.defaultMessage', { name: layoutName }),
+        message: selectedPlot
+          ? `I am interested in Plot ${selectedPlot.plotNumber} at ${layoutName}. Please have the Admin contact me with details.`
+          : t('detail.inquiry.defaultMessage', { name: layoutName }),
     }));
-  }, [layoutName, t]);
+  }, [layoutName, selectedPlot, t]);
 
   const submitInquiry = async (subject: string) => {
     if (siteKey && !recaptchaToken) {
@@ -91,11 +98,15 @@ export default function LayoutInquiryForm({
     try {
       await api.post('/inquiries', {
         ...form,
-        subject,
+        subject: selectedPlot ? 'Plot Inquiry' : subject,
+        message: selectedPlot
+          ? `${form.message}\n\nPlot: ${selectedPlot.plotNumber}\nLayout: ${layoutName}`
+          : form.message,
         recaptchaToken: recaptchaToken || undefined,
       });
       setSubmitted(true);
-      notify.success('Thank you! Our team will contact you shortly.');
+      notify.success('Thank you! Our Admin team will contact you shortly.');
+      onClearPlot?.();
       setForm({
         name: '',
         email: '',
@@ -140,6 +151,21 @@ export default function LayoutInquiryForm({
               subtitle={t('detail.inquiry.subtitle')}
               light
             />
+            {selectedPlot ? (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white ring-1 ring-white/15">
+                <span>Plot {selectedPlot.plotNumber}</span>
+                {onClearPlot ? (
+                  <button
+                    type="button"
+                    onClick={onClearPlot}
+                    className="rounded-full px-1 text-white/70 hover:text-white"
+                    aria-label="Clear selected plot"
+                  >
+                    ✕
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <motion.ul
               variants={listContainerVariants}
               initial="hidden"

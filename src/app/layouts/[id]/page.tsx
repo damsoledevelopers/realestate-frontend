@@ -1,11 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import { Layout, Plot } from '@/lib/types';
-import PlotMap from '@/components/PlotMap';
-import BookingModal from '@/components/BookingModal';
+import {
+  getGalleryImages,
+  getHeroImage,
+} from '@/lib/layoutImages';
+import { getPlotCounts } from '@/lib/layoutStats';
+import { useLayoutRealtime } from '@/hooks/useLayoutRealtime';
+import type { PlotStatusRealtimeEvent } from '@/lib/socket';
+import { prefetchLayoutMapGeoJson } from '@/lib/layoutMapGeoJson';
+import LayoutSitePlanMap from '@/components/maps/LayoutSitePlanMap';
 import PropertySummary from '@/components/layouts/detail/PropertySummary';
 import QuickHighlights from '@/components/layouts/detail/QuickHighlights';
 import PremiumGallery from '@/components/layouts/detail/PremiumGallery';
@@ -18,29 +21,24 @@ import LayoutInquiryForm from '@/components/layouts/detail/LayoutInquiryForm';
 import PropertyContact from '@/components/property/PropertyContact';
 import StickyMobileCTA from '@/components/layouts/detail/StickyMobileCTA';
 import AnimatedSection from '@/components/layouts/detail/AnimatedSection';
-import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { getLayoutDisplayName, getLocalizedLocation } from '@/lib/localizedText';
 import { notify } from '@/lib/notify';
-import {
-  getGalleryImages,
-  getHeroImage,
-  getPrimaryLayoutImage,
-} from '@/lib/layoutImages';
-import { getPlotCounts } from '@/lib/layoutStats';
-import { useLayoutRealtime } from '@/hooks/useLayoutRealtime';
-import type { PlotStatusRealtimeEvent } from '@/lib/socket';
+import { Layout, Plot } from '@/lib/types';
+import { api } from '@/lib/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 
 export default function LayoutDetailPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const layoutId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
-  const { user } = useAuth();
+  const highlightPlotId = searchParams.get('plotId');
   const { t, locale } = useLocale();
-  const router = useRouter();
   const [layout, setLayout] = useState<Layout | null>(null);
   const [plots, setPlots] = useState<Plot[]>([]);
-  const [selectedPlot, setSelectedPlot] = useState<Plot | null>(null);
-  const [showBooking, setShowBooking] = useState(false);
+  const [enquiryPlot, setEnquiryPlot] = useState<Plot | null>(null);
+  const inquiryRef = useRef<HTMLDivElement>(null);
 
   const fetchData = () => {
     api
@@ -53,7 +51,10 @@ export default function LayoutDetailPage() {
   };
 
   useEffect(() => {
-    if (layoutId) fetchData();
+    if (!layoutId) return;
+    // Prefetch CAD lines while layout details load so the map paints instantly.
+    prefetchLayoutMapGeoJson(layoutId).catch(() => {});
+    fetchData();
   }, [layoutId]);
 
   const applyRealtimeStatus = useCallback((event: PlotStatusRealtimeEvent) => {
@@ -73,7 +74,7 @@ export default function LayoutDetailPage() {
           : plot
       )
     );
-    setSelectedPlot((prev) =>
+    setEnquiryPlot((prev) =>
       prev && prev._id === event.plotId
         ? {
             ...prev,
@@ -95,18 +96,14 @@ export default function LayoutDetailPage() {
     onPlotStatus: applyRealtimeStatus,
   });
 
-  const scrollToInquiry = () => {
-    document.getElementById('layout-inquiry')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const scrollToInquiry = (plot?: Plot | null) => {
+    if (plot) setEnquiryPlot(plot);
+    inquiryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const handleBookNow = (plot: Plot) => {
-    if (!user) {
-      notify.error(t('detail.signInToBook'));
-      router.push('/login');
-      return;
-    }
-    setSelectedPlot(plot);
-    setShowBooking(true);
+  const handleEnquire = (plot: Plot) => {
+    setEnquiryPlot(plot);
+    scrollToInquiry(plot);
   };
 
   const handleDownloadBrochure = () => {
@@ -144,27 +141,22 @@ export default function LayoutDetailPage() {
 
   const galleryImages = getGalleryImages(layout);
   const featuredImage = getHeroImage(layout);
-  const mapImage = getPrimaryLayoutImage(layout);
   const { available: availableCount } = getPlotCounts(layout, plots);
 
   return (
     <div className="bg-surface pb-20 lg:pb-0">
-      {/* 1. Property Summary */}
       <PropertySummary
         layout={layout}
         featuredImage={featuredImage}
-        onBookVisit={scrollToInquiry}
-        onContactSales={scrollToInquiry}
+        onBookVisit={() => scrollToInquiry()}
+        onContactSales={() => scrollToInquiry()}
         onDownloadBrochure={handleDownloadBrochure}
       />
 
-      {/* 2. Quick Highlights */}
       <QuickHighlights />
 
-      {/* 3. Gallery */}
       <PremiumGallery images={galleryImages} layoutName={localizedLayoutName} />
 
-      {/* 3b. Site photos with GPS */}
       <SitePhotoPublicGallery
         entityType="layout"
         entityId={layout._id}
@@ -177,10 +169,8 @@ export default function LayoutDetailPage() {
         className="section-container py-6 lg:py-8"
       />
 
-      {/* 4. Amenities */}
       <AmenitiesSection />
 
-      {/* 5. Interactive Plot Map */}
       <AnimatedSection id="plot-map-section" className="section-container py-6 lg:py-8">
         <div className="premium-card !p-4 sm:!p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -199,22 +189,21 @@ export default function LayoutDetailPage() {
               </span>
             )}
           </div>
-          <PlotMap
+          <LayoutSitePlanMap
             layoutId={layout._id}
-            layoutImage={mapImage}
+            layout={layout}
+            plots={plots}
             layoutName={localizedLayoutName}
             layoutLocation={localizedLocation}
-            layoutCoordinates={layout.coordinates}
-            plots={plots}
-            onBookNow={handleBookNow}
+            onEnquire={handleEnquire}
+            highlightPlotId={highlightPlotId}
+            className="min-h-[560px] w-full"
           />
         </div>
       </AnimatedSection>
 
-      {/* 6. Location & Nearby Places */}
       <LocationAdvantages layout={layout} />
 
-      {/* Contact Information */}
       <AnimatedSection className="section-container py-6 lg:py-8">
         <PropertyContact
           entityType="layout"
@@ -223,33 +212,17 @@ export default function LayoutDetailPage() {
         />
       </AnimatedSection>
 
-      {/* 7. Testimonials */}
       <TestimonialsSection />
 
-      {/* 8. Inquiry Form */}
-      <LayoutInquiryForm layoutName={localizedLayoutName} />
-
-      <StickyMobileCTA onBookVisit={scrollToInquiry} contactUser={layout.contactUser} />
-
-      {showBooking && selectedPlot && (
-        <BookingModal
-          plot={selectedPlot}
+      <div ref={inquiryRef}>
+        <LayoutInquiryForm
           layoutName={localizedLayoutName}
-          layoutLocation={localizedLocation}
-          onClose={() => {
-            setShowBooking(false);
-            setSelectedPlot(null);
-          }}
-          onSuccess={(plotId) => {
-            setPlots((prev) =>
-              prev.map((p) => (p._id === plotId ? { ...p, status: 'booked' } : p))
-            );
-            setSelectedPlot((prev) =>
-              prev && prev._id === plotId ? { ...prev, status: 'booked' } : prev
-            );
-          }}
+          selectedPlot={enquiryPlot}
+          onClearPlot={() => setEnquiryPlot(null)}
         />
-      )}
+      </div>
+
+      <StickyMobileCTA onBookVisit={() => scrollToInquiry()} contactUser={layout.contactUser} />
     </div>
   );
 }

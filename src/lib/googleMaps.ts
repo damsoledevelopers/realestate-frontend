@@ -25,6 +25,42 @@ export function hasValidCoordinates(
   );
 }
 
+export interface LatLngLike {
+  lat: number;
+  lng: number;
+}
+
+export function hasMapGeometry(
+  boundary?: LatLngLike[] | null,
+  polylines?: LatLngLike[][] | null,
+  hasMapGeoJson?: boolean
+): boolean {
+  if (hasMapGeoJson) return true;
+  if (boundary && boundary.length >= 3) return true;
+  return Boolean(polylines?.some((path) => path.length >= 2));
+}
+
+export function getLayoutMapPageUrl(layoutId: string): string {
+  return `/layouts/${layoutId}/map`;
+}
+
+export function getViewOnMapUrl(options: {
+  latitude?: number | null;
+  longitude?: number | null;
+  boundary?: LatLngLike[] | null;
+  polylines?: LatLngLike[][] | null;
+  layoutId?: string | null;
+  hasMapGeoJson?: boolean;
+}): string | null {
+  const { latitude, longitude, boundary, polylines, layoutId, hasMapGeoJson } = options;
+
+  if (layoutId && hasMapGeometry(boundary, polylines, hasMapGeoJson)) {
+    return getLayoutMapPageUrl(layoutId);
+  }
+
+  return getGoogleMapsExternalUrl(latitude, longitude);
+}
+
 export function getGoogleMapsExternalUrl(
   lat?: number | null,
   lng?: number | null

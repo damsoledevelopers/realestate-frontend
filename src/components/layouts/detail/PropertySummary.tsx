@@ -33,7 +33,9 @@ export default function PropertySummary({
   onContactSales,
 }: PropertySummaryProps) {
   const { t, locale } = useLocale();
-  const { total, available, sold } = getPlotCounts(layout, layout.plots ?? []);
+  const { total, available, booked, sold } = getPlotCounts(layout, layout.plots ?? []);
+  const landCount = layout.linkedPropertyCounts?.land ?? 0;
+  const farmCount = layout.linkedPropertyCounts?.farm ?? 0;
   const localizedLocation = getLocalizedLocation(layout.location, locale, layout.locationMr);
   const localizedName = getLayoutDisplayName(layout, locale);
   const description =
@@ -91,8 +93,8 @@ export default function PropertySummary({
               ))}
             </div>
 
-            {/* Stat Cards Grid with Enhanced Lift & Glow Effects */}
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {/* Inventory counts: registered plots + linked lands/farms */}
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               <StatCard
                 label={t('detail.startingPrice')}
                 value={
@@ -105,12 +107,22 @@ export default function PropertySummary({
                 accent
               />
               <StatCard
+                label={t('detail.totalPlots')}
+                value={<CountUp end={total} className="text-xl font-bold text-gray-900 sm:text-2xl" />}
+              />
+              <StatCard
                 label={t('common.available')}
                 value={<CountUp end={available} className="text-xl font-bold text-gray-900 sm:text-2xl" />}
               />
               <StatCard
-                label={t('detail.totalPlots')}
-                value={<CountUp end={total} className="text-xl font-bold text-gray-900 sm:text-2xl" />}
+                label={t('property.type.land')}
+                value={<CountUp end={landCount} className="text-xl font-bold text-gray-900 sm:text-2xl" />}
+                muted={landCount === 0}
+              />
+              <StatCard
+                label={t('property.type.farm')}
+                value={<CountUp end={farmCount} className="text-xl font-bold text-gray-900 sm:text-2xl" />}
+                muted={farmCount === 0}
               />
               <StatCard
                 label={t('common.sold')}
@@ -118,6 +130,12 @@ export default function PropertySummary({
                 muted={sold === 0}
               />
             </div>
+            {(booked > 0 || sold > 0) && (
+              <p className="mt-2 text-xs text-gray-500">
+                {t('common.booked')}: {booked}
+                {sold > 0 ? ` · ${t('common.sold')}: ${sold}` : ''}
+              </p>
+            )}
           </motion.div>
 
           {/* Sticky Media Card & Book Site Visit Sidebar */}
