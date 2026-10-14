@@ -23,7 +23,7 @@ export default function DashboardLayoutCard({ layout }: DashboardLayoutCardProps
     : '—';
 
   return (
-    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+    <article className="flex h-auto min-w-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
       <Link href={`/dashboard/layouts/${layout._id}`} className="relative block aspect-[16/10] bg-gray-100">
         <LayoutImage
           src={image}
@@ -43,6 +43,9 @@ export default function DashboardLayoutCard({ layout }: DashboardLayoutCardProps
             <span className="rounded-full bg-sky-600/90 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
               Partner
             </span>
+          )}
+          {layout.approvalStatus && layout.approvalStatus !== 'approved' && (
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase text-white ${layout.approvalStatus === 'rejected' ? 'bg-red-600/90' : 'bg-amber-600/90'}`}>{layout.approvalStatus}</span>
           )}
           {layout.status === 'inactive' && (
             <span className="rounded-full bg-gray-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">

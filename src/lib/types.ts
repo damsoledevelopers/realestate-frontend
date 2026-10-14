@@ -14,7 +14,7 @@ export interface User {
   id?: string;
   name: string;
   email: string;
-  role: 'super_admin' | 'user' | 'customer' | 'admin';
+  role: 'super_admin' | 'user' | 'partner' | 'customer' | 'admin';
   isActive: boolean;
   dashboardRequestStatus?: DashboardRequestStatus;
   dashboardRequestDocument?: string;
@@ -148,6 +148,15 @@ export interface PropertyGisFields {
   propertyType?: PropertyGisType;
   propertyName?: string;
   propertyNumber?: string;
+  state?: string;
+  district?: string;
+  taluka?: string;
+  village?: string;
+  address?: string;
+  surveyNumber?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
   area?: PropertyArea;
   latitude?: number | null;
   longitude?: number | null;
@@ -159,12 +168,30 @@ export interface Layout extends PropertyGisFields {
   nameMr?: string;
   description: string;
   location: string;
+  contactEmail?: string;
+  contactNumber?: string;
+  downloadLink?: string;
+  documents?: Array<{ name: string; url: string; visible: boolean; mimeType?: string }> ;
+  layoutFileUrl?: string;
   locationMr?: string;
+  state?: string;
+  district?: string;
+  taluka?: string;
+  village?: string;
+  surveyNumber?: string;
+  surveyNumbers?: string[];
+  amenities?: string[];
+  visibleAmenities?: string[];
+  attachments?: Array<{ name: string; url: string; visible: boolean; mimeType?: string }>;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
   coordinates?: { lat?: number; lng?: number };
   imageUrl: string;
   images?: string[];
+  hiddenImages?: string[];
   totalPlots: number;
   status: 'active' | 'inactive';
+  /** Whether the public Site Plan / Interactive Plot Map section is visible. */
+  showSitePlan?: boolean;
   createdBy?: string;
   ownerId?: string;
   isOwner?: boolean;
@@ -213,6 +240,7 @@ export interface LayoutPartnerUser {
   _id: string;
   name: string;
   email: string;
+  phone?: string;
   role: User['role'];
 }
 
@@ -231,6 +259,7 @@ export interface LayoutPartnersResponse {
 }
 
 export interface Plot extends PropertyGisFields {
+  surveyNumber?: string;
   _id: string;
   layoutId: string | Layout;
   plotNumber: string;
@@ -244,7 +273,9 @@ export interface Plot extends PropertyGisFields {
   latitude?: number | null;
   longitude?: number | null;
   sellerName?: string;
+  sellerEmail?: string;
   sellerPhone?: string;
+  locationAddress?: string;
   sellerCustomerId?: string | null;
   boundaryPath?: LatLngPoint[] | null;
   mapLinesPath?: LatLngPoint[][] | null;
@@ -315,6 +346,12 @@ export interface Inquiry {
   phone: string;
   subject: string;
   message: string;
+  layoutId?: string | null;
+  layoutName?: string;
+  layoutLocation?: string;
+  layoutCoordinates?: { lat?: number | null; lng?: number | null } | null;
+  plotNumber?: string;
+  surveyNumber?: string;
   status: 'new' | 'read' | 'replied';
   createdAt: string;
 }
@@ -852,6 +889,8 @@ export interface MapPropertiesResponse {
 
 export interface Property extends MapProperty {
   _id: string;
+  state?: string; district?: string; taluka?: string; village?: string; address?: string; surveyNumber?: string;
+  ownerName?: string; ownerEmail?: string; ownerPhone?: string;
   description: string;
   isActive: boolean;
   boundaryPath: LatLngPoint[] | null;

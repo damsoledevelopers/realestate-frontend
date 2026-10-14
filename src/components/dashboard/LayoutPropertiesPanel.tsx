@@ -31,6 +31,7 @@ interface LayoutPropertiesPanelProps {
 
 const emptyPlot = {
   plotNumber: '',
+  surveyNumber: '',
   size: '',
   price: '',
   lat: '',
@@ -39,7 +40,9 @@ const emptyPlot = {
   constructionStatus: 'empty_plot' as ConstructionStatus,
   description: '',
   sellerName: '',
+  sellerEmail: '',
   sellerPhone: '',
+  locationAddress: '',
   coordinates: { x: 10, y: 10 },
 };
 
@@ -390,12 +393,37 @@ export default function LayoutPropertiesPanel({ layout, onUpdated }: LayoutPrope
         <div className="modal-overlay">
           <form onSubmit={savePlot} className="modal-panel-md">
             <h2 className="text-lg font-semibold">Add Plot for Sale</h2>
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 max-h-[70vh] space-y-3 overflow-y-auto pr-1">
               <input className="input-field" placeholder="Plot number (must match imported plot #)" value={plotForm.plotNumber} onChange={(e) => setPlotForm({ ...plotForm, plotNumber: e.target.value })} required />
-              <input className="input-field" placeholder="Land owner name (internal note)" value={plotForm.sellerName} onChange={(e) => setPlotForm({ ...plotForm, sellerName: e.target.value })} />
-              <input className="input-field" placeholder="Land owner phone (internal note)" value={plotForm.sellerPhone} onChange={(e) => setPlotForm({ ...plotForm, sellerPhone: e.target.value })} />
-              <input className="input-field" placeholder="Size" value={plotForm.size} onChange={(e) => setPlotForm({ ...plotForm, size: e.target.value })} required />
-              <input className="input-field" type="number" placeholder="Price (optional)" value={plotForm.price} onChange={(e) => setPlotForm({ ...plotForm, price: e.target.value })} />
+              <input className="input-field" placeholder="Survey / Gat number (optional)" value={plotForm.surveyNumber} onChange={(e) => setPlotForm({ ...plotForm, surveyNumber: e.target.value })} />
+              <div className="form-grid">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Land owner name</label>
+                  <input className="input-field" placeholder="Enter owner full name" value={plotForm.sellerName} onChange={(e) => setPlotForm({ ...plotForm, sellerName: e.target.value })} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Owner phone number</label>
+                  <input className="input-field" type="tel" inputMode="tel" placeholder="Enter contact number" value={plotForm.sellerPhone} onChange={(e) => setPlotForm({ ...plotForm, sellerPhone: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Owner email address</label>
+                <input className="input-field" type="email" placeholder="owner@example.com" value={plotForm.sellerEmail} onChange={(e) => setPlotForm({ ...plotForm, sellerEmail: e.target.value })} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Plot location address</label>
+                <textarea className="input-field min-h-[76px] resize-y" placeholder="Enter plot address, village, taluka, district and PIN code" value={plotForm.locationAddress} onChange={(e) => setPlotForm({ ...plotForm, locationAddress: e.target.value })} rows={2} />
+              </div>
+              <div className="form-grid">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Plot size *</label>
+                  <input className="input-field" placeholder="e.g. 1200 sq ft" value={plotForm.size} onChange={(e) => setPlotForm({ ...plotForm, size: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Price (optional)</label>
+                  <input className="input-field" type="number" min="0" placeholder="Enter price" value={plotForm.price} onChange={(e) => setPlotForm({ ...plotForm, price: e.target.value })} />
+                </div>
+              </div>
               <div className="form-grid">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-600">{t('layoutForm.latitude')}</label>

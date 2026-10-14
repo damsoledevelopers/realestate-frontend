@@ -1,7 +1,7 @@
 'use client';
 
-import SuperAdminRoute from '@/components/auth/SuperAdminRoute';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function DashboardInquiriesLayout({ children }: { children: React.ReactNode }) {
-  return <SuperAdminRoute>{children}</SuperAdminRoute>;
+  return <ProtectedRoute requireDashboard>{children}</ProtectedRoute>;
 }

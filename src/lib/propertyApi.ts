@@ -6,6 +6,7 @@ export interface PropertyListFilters {
   status?: string;
   search?: string;
   isActive?: boolean;
+  linkedLayoutId?: string;
   page?: number;
   limit?: number;
 }
@@ -21,6 +22,7 @@ export interface PropertyWritePayload {
   latitude: number;
   longitude: number;
   isActive?: boolean;
+  linkedLayoutId?: string | null;
 }
 
 function buildQuery(filters: PropertyListFilters = {}): string {
@@ -29,6 +31,7 @@ function buildQuery(filters: PropertyListFilters = {}): string {
   if (filters.status) params.set('status', filters.status);
   if (filters.search?.trim()) params.set('search', filters.search.trim());
   if (filters.isActive !== undefined) params.set('isActive', String(filters.isActive));
+  if (filters.linkedLayoutId) params.set('linkedLayoutId', filters.linkedLayoutId);
   if (filters.page) params.set('page', String(filters.page));
   if (filters.limit) params.set('limit', String(filters.limit));
   const query = params.toString();

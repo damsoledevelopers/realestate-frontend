@@ -7,8 +7,19 @@ import { notify } from '@/lib/notify';
 import { getApiErrorMessage } from '@/lib/api';
 import { createProperty, updateProperty } from '@/lib/propertyApi';
 import { Property, PropertyType } from '@/lib/types';
+import { useManagedLayoutList } from '@/hooks/useManagedLayoutList';
 
 const AREA_UNITS = ['sqft', 'sqm', 'acre', 'hectare'] as const;
+
+function getLinkedLayoutId(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const record = value as { _id?: unknown; id?: unknown };
+    if (typeof record._id === 'string') return record._id;
+    if (typeof record.id === 'string') return record.id;
+  }
+  return '';
+}
 
 export interface PropertyFormValues {
   name: string;
@@ -18,8 +29,18 @@ export interface PropertyFormValues {
   price: string;
   status: string;
   description: string;
+  state: string;
+  district: string;
+  taluka: string;
+  village: string;
+  address: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone: string;
+  surveyNumber: string;
   lat: string;
   lng: string;
+  linkedLayoutId: string;
 }
 
 export const emptyPropertyForm = (status = 'available'): PropertyFormValues => ({
@@ -30,8 +51,11 @@ export const emptyPropertyForm = (status = 'available'): PropertyFormValues => (
   price: '',
   status,
   description: '',
+  state: '', district: '', taluka: '', village: '', address: '',
+  ownerName: '', ownerEmail: '', ownerPhone: '', surveyNumber: '',
   lat: '',
   lng: '',
+  linkedLayoutId: '',
 });
 
 interface PropertyFormModalProps {
@@ -53,6 +77,7 @@ export default function PropertyFormModal({
 }: PropertyFormModalProps) {
   const { t } = useLocale();
   const { saleStatuses } = usePropertyStatusConfig();
+  const { data: layouts = [] } = useManagedLayoutList();
   const [form, setForm] = useState<PropertyFormValues>(emptyPropertyForm());
   const [saving, setSaving] = useState(false);
 
@@ -67,8 +92,11 @@ export default function PropertyFormModal({
         price: editingProperty.price != null ? String(editingProperty.price) : '',
         status: editingProperty.status || 'available',
         description: editingProperty.description || '',
+        state: editingProperty.state || '', district: editingProperty.district || '', taluka: editingProperty.taluka || '', village: editingProperty.village || '', address: editingProperty.address || '',
+        ownerName: editingProperty.ownerName || '', ownerEmail: editingProperty.ownerEmail || '', ownerPhone: editingProperty.ownerPhone || '', surveyNumber: editingProperty.surveyNumber || '',
         lat: editingProperty.latitude != null ? String(editingProperty.latitude) : '',
         lng: editingProperty.longitude != null ? String(editingProperty.longitude) : '',
+        linkedLayoutId: getLinkedLayoutId(editingProperty.linkedLayoutId),
       });
     } else {
       setForm(emptyPropertyForm(saleStatuses[0]?.key || 'available'));
@@ -107,8 +135,11 @@ export default function PropertyFormModal({
       price: form.price === '' ? null : Number(form.price),
       status: form.status,
       description: form.description.trim(),
+      state: form.state.trim(), district: form.district.trim(), taluka: form.taluka.trim(), village: form.village.trim(), address: form.address.trim(),
+      ownerName: form.ownerName.trim(), ownerEmail: form.ownerEmail.trim(), ownerPhone: form.ownerPhone.trim(), surveyNumber: form.surveyNumber.trim(),
       latitude: lat,
       longitude: lng,
+      linkedLayoutId: form.linkedLayoutId || null,
     };
 
     setSaving(true);
@@ -160,6 +191,14 @@ export default function PropertyFormModal({
               onChange={(e) => setForm({ ...form, propertyNumber: e.target.value })}
               required
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Linked layout name</label>
+            <select className="input-field" value={form.linkedLayoutId} onChange={(e) => setForm({ ...form, linkedLayoutId: e.target.value })}>
+              <option value="">Not linked to a layout</option>
+              {[...layouts].sort((a, b) => a.name.localeCompare(b.name)).map((layout) => <option key={layout._id} value={layout._id}>{layout.name}</option>)}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">This link powers the layout-name filter on the Lands and Farms pages.</p>
           </div>
           <div className="form-grid">
             <div>
@@ -250,6 +289,24 @@ export default function PropertyFormModal({
                 onChange={(e) => setForm({ ...form, lng: e.target.value })}
                 required
               />
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">Location details</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {([['state','State'],['district','District'],['taluka','Taluka / Tehsil'],['village','Village'],['surveyNumber','Survey / Gat number'],['address','Full address']] as const).map(([key,label]) => <div key={key} className={key === 'address' ? 'sm:col-span-2' : ''}>
+                <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
+                <input className="input-field" value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+              </div>)}
+            </div>
+          </div>
+          <div className="border-t border-gray-100 pt-4">
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">Owner / Contact details</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {([['ownerName','Owner name'],['ownerEmail','Owner email'],['ownerPhone','Owner mobile number']] as const).map(([key,label]) => <div key={key}>
+                <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
+                <input className="input-field" type={key === 'ownerEmail' ? 'email' : 'text'} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+              </div>)}
             </div>
           </div>
           <div>

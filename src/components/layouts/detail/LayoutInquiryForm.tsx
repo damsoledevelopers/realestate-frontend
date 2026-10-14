@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { motion, Variants } from 'framer-motion';
+import { MessageCircle } from 'lucide-react';
 import { api, getApiErrorMessage } from '@/lib/api';
 import { notify } from '@/lib/notify';
 import InquiryRecaptcha from '@/components/contact/InquiryRecaptcha';
@@ -13,6 +14,9 @@ import { Plot } from '@/lib/types';
 
 interface LayoutInquiryFormProps {
   layoutName: string;
+  layoutId?: string;
+  layoutLocation?: string;
+  layoutCoordinates?: { lat?: number; lng?: number };
   defaultSubject?: string;
   selectedPlot?: Plot | null;
   onClearPlot?: () => void;
@@ -62,6 +66,7 @@ const formFieldVariants: Variants = {
 
 export default function LayoutInquiryForm({
   layoutName,
+  layoutId, layoutLocation = '', layoutCoordinates,
   defaultSubject = 'Plot Inquiry',
   selectedPlot = null,
   onClearPlot,
@@ -103,6 +108,10 @@ export default function LayoutInquiryForm({
           ? `${form.message}\n\nPlot: ${selectedPlot.plotNumber}\nLayout: ${layoutName}`
           : form.message,
         recaptchaToken: recaptchaToken || undefined,
+        layoutId, layoutName, layoutLocation,
+        layoutCoordinates: selectedPlot?.latitude != null && selectedPlot?.longitude != null ? { lat: selectedPlot.latitude, lng: selectedPlot.longitude } : layoutCoordinates,
+        plotNumber: selectedPlot?.plotNumber || '',
+        surveyNumber: (selectedPlot as (Plot & { surveyNumber?: string }) | null)?.surveyNumber || selectedPlot?.plotNumber || '',
       });
       setSubmitted(true);
       notify.success('Thank you! Our Admin team will contact you shortly.');
@@ -127,6 +136,31 @@ export default function LayoutInquiryForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitInquiry(defaultSubject);
+  };
+
+  // Opens WhatsApp with the current layout/plot details and a Google Maps link.
+  // With no configured recipient, WhatsApp lets the visitor choose whom to share it with.
+  const shareLocationOnWhatsApp = () => {
+    const coordinates = selectedPlot?.latitude != null && selectedPlot?.longitude != null
+      ? { lat: selectedPlot.latitude, lng: selectedPlot.longitude }
+      : layoutCoordinates;
+    const mapLink = coordinates?.lat != null && coordinates?.lng != null
+      ? `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}`
+      : layoutLocation
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(layoutLocation)}`
+        : '';
+    const details = [
+      `Hello, I am interested in ${selectedPlot ? `Plot ${selectedPlot.plotNumber} at ` : ''}${layoutName}.`,
+      selectedPlot ? `Plot Number: ${selectedPlot.plotNumber}` : '',
+      (selectedPlot as (Plot & { surveyNumber?: string }) | null)?.surveyNumber
+        ? `Survey/Gat Number: ${(selectedPlot as Plot & { surveyNumber?: string }).surveyNumber}`
+        : '',
+      layoutLocation ? `Location: ${layoutLocation}` : '',
+      mapLink ? `Google Maps: ${mapLink}` : '',
+      typeof window !== 'undefined' ? `Website: ${window.location.href}` : '',
+      'Please share more details about availability and pricing.',
+    ].filter(Boolean).join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(details)}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -324,6 +358,15 @@ export default function LayoutInquiryForm({
                     className="inline-flex flex-1 items-center justify-center rounded-lg border border-primary-200 bg-primary-50 px-4 py-2.5 text-sm font-semibold text-primary-800 transform transition-all duration-300 hover:-translate-y-1.5 hover:bg-primary-100 hover:shadow-lg hover:shadow-black/20 active:scale-[0.98]"
                   >
                     {t('detail.downloadBrochure')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={shareLocationOnWhatsApp}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-800 transition-all duration-300 hover:-translate-y-1 hover:bg-green-100 hover:shadow-lg active:scale-[0.98]"
+                    aria-label="Share plot and location on WhatsApp"
+                  >
+                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                    Share on WhatsApp
                   </button>
                 </motion.div>
               </motion.form>

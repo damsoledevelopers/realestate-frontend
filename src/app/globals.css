@@ -204,11 +204,15 @@
   }
 
   .modal-overlay {
-    @apply fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4;
+    @apply fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-2 sm:p-4;
   }
 
   .modal-panel {
     @apply max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl sm:max-h-[90vh] sm:max-w-lg sm:rounded-xl sm:p-6;
+  }
+
+  .modal-panel-lg {
+    @apply my-auto max-h-[96dvh] w-full max-w-6xl overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:max-h-[94dvh] sm:rounded-2xl sm:p-6 lg:p-8;
   }
 
   .modal-panel-md {
@@ -245,5 +249,32 @@
 
   .summary-cta-outline {
     @apply inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-primary-100 hover:bg-primary-50 hover:text-primary-800 active:scale-[0.98];
+  }
+}
+
+/* Consistent, restrained motion and small-screen safety across dashboard pages. */
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { min-width: 320px; }
+  button, a, input, select, textarea { transition-property: color, background-color, border-color, box-shadow, opacity, transform; transition-duration: 180ms; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid rgb(59 130 246 / 0.8);
+    outline-offset: 2px;
+  }
+  img, video, canvas, svg { max-width: 100%; }
+}
+@media (max-width: 640px) {
+  .dashboard-page { padding-left: 0; padding-right: 0; }
+  .page-header { min-width: 0; }
+  .page-header-title, .page-header-subtitle { overflow-wrap: anywhere; }
+  .table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+  .modal-panel, .modal-panel-md, .modal-panel-lg { max-width: calc(100vw - 1rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

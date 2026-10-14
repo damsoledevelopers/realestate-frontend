@@ -1,15 +1,11 @@
 'use client';
 
 import { motion, Variants } from 'framer-motion';
-import {
-  LayoutSortOption,
-  PRICE_RANGE_OPTIONS,
-  PriceRangeFilter,
-  SORT_OPTIONS,
-} from '@/lib/layoutFilters';
+import { INDIA_STATES, getDependentLocationOptions, LayoutSortOption, PriceRangeFilter } from '@/lib/layoutFilters';
 import { LayoutStatusFilter } from '@/hooks/useLayouts';
 import { useLocale } from '@/context/LocaleContext';
 import { LocationOption } from '@/lib/localizedText';
+import { Layout } from '@/lib/types';
 
 interface LayoutFiltersBarProps {
   search: string;
@@ -25,6 +21,17 @@ interface LayoutFiltersBarProps {
   locationOptions?: LocationOption[];
   showStatusFilter?: boolean;
   idPrefix?: string;
+  layouts?: Layout[];
+  state?: string;
+  onStateChange?: (value: string) => void;
+  district?: string;
+  onDistrictChange?: (value: string) => void;
+  taluka?: string;
+  onTalukaChange?: (value: string) => void;
+  village?: string;
+  onVillageChange?: (value: string) => void;
+  surveyNumber?: string;
+  onSurveyNumberChange?: (value: string) => void;
 }
 
 // Staggered Entrance Animations
@@ -66,30 +73,19 @@ export default function LayoutFiltersBar({
   locationOptions = [],
   showStatusFilter = false,
   idPrefix = 'layout',
+  layouts = [],
+  state = '',
+  onStateChange,
+  district = '',
+  onDistrictChange,
+  taluka = '',
+  onTalukaChange,
+  village = '',
+  onVillageChange,
+  surveyNumber = '',
+  onSurveyNumberChange,
 }: LayoutFiltersBarProps) {
   const { t, locale } = useLocale();
-
-  const priceLabels: Record<string, string> =
-    locale === 'mr'
-      ? {
-          all: 'कोणतीही किंमत',
-          'under-5l': '₹5 लाखांखाली',
-          '5l-10l': '₹5 - 10 लाख',
-          '10l-25l': '₹10 - 25 लाख',
-          'above-25l': '₹25 लाखांपेक्षा जास्त',
-        }
-      : {};
-
-  const sortLabels: Record<string, string> =
-    locale === 'mr'
-      ? {
-          newest: 'नवीनतम',
-          updated: 'अलीकडे अपडेट',
-          price: 'किंमत: कमी ते जास्त',
-          available: 'जास्त उपलब्ध',
-          plots: 'जास्त प्लॉट',
-        }
-      : {};
 
   return (
     <motion.div
@@ -121,77 +117,54 @@ export default function LayoutFiltersBar({
           />
         </motion.div>
 
-        {/* Location Dropdown / Input */}
-        <motion.div variants={itemVariants} className="group/field min-w-0 lg:max-w-[220px] lg:flex-1">
-          <label htmlFor={`${idPrefix}-location`} className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-700 transition-colors duration-200 group-focus-within/field:text-emerald-700 sm:text-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-gray-300 transition-colors group-focus-within/field:bg-emerald-500" />
-            {t('filters.location')}
-          </label>
-          {locationOptions.length > 0 ? (
-            <select
-              id={`${idPrefix}-location`}
-              value={location}
-              onChange={(e) => onLocationChange(e.target.value)}
-              className="input-field cursor-pointer transform transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus:-translate-y-0.5 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
-            >
-              <option value="">{t('filters.allLocations')}</option>
-              {locationOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : (
+        {/* Dependent State -> District -> Taluka -> Village filters */}
+        {onStateChange && onDistrictChange && onTalukaChange && onVillageChange && (
+          <>
+            <motion.div variants={itemVariants} className="group/field min-w-0">
+              <label htmlFor={`${idPrefix}-state`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">State / UT</label>
+              <select id={`${idPrefix}-state`} value={state} onChange={(e) => { onStateChange(e.target.value); onDistrictChange(''); onTalukaChange(''); onVillageChange(''); }} className="input-field cursor-pointer">
+                <option value="">All States / UTs</option>
+                {INDIA_STATES.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </motion.div>
+            <motion.div variants={itemVariants} className="group/field min-w-0">
+              <label htmlFor={`${idPrefix}-district`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">District</label>
+              <select id={`${idPrefix}-district`} value={district} disabled={!state} onChange={(e) => { onDistrictChange(e.target.value); onTalukaChange(''); onVillageChange(''); }} className="input-field cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-100">
+                <option value="">All Districts</option>
+                {getDependentLocationOptions(layouts, 'district', { state }).map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </motion.div>
+            <motion.div variants={itemVariants} className="group/field min-w-0">
+              <label htmlFor={`${idPrefix}-taluka`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">Taluka / Tehsil</label>
+              <select id={`${idPrefix}-taluka`} value={taluka} disabled={!district} onChange={(e) => { onTalukaChange(e.target.value); onVillageChange(''); }} className="input-field cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-100">
+                <option value="">All Talukas</option>
+                {getDependentLocationOptions(layouts, 'taluka', { state, district }).map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </motion.div>
+            <motion.div variants={itemVariants} className="group/field min-w-0">
+              <label htmlFor={`${idPrefix}-village`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">Village</label>
+              <select id={`${idPrefix}-village`} value={village} disabled={!district} onChange={(e) => onVillageChange(e.target.value)} className="input-field cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-100">
+                <option value="">All Villages</option>
+                {getDependentLocationOptions(layouts, 'village', { state, district, taluka }).map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </motion.div>
+          </>
+        )}
+
+        {/* Survey / Gat Number Search */}
+        {onSurveyNumberChange && (
+          <motion.div variants={itemVariants} className="group/field min-w-0">
+            <label htmlFor={`${idPrefix}-survey-number`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">Survey / Gat Number</label>
             <input
-              id={`${idPrefix}-location`}
-              type="text"
-              value={location}
-              onChange={(e) => onLocationChange(e.target.value)}
-              placeholder={t('filters.locationPlaceholder')}
-              className="input-field transform transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus:-translate-y-0.5 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
+              id={`${idPrefix}-survey-number`}
+              type="search"
+              value={surveyNumber}
+              onChange={(e) => onSurveyNumberChange(e.target.value)}
+              placeholder="e.g. 125 or 12/A"
+              className="input-field"
             />
-          )}
-        </motion.div>
-
-        {/* Price Range Dropdown */}
-        <motion.div variants={itemVariants} className="group/field min-w-0">
-          <label htmlFor={`${idPrefix}-price`} className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-700 transition-colors duration-200 group-focus-within/field:text-emerald-700 sm:text-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-gray-300 transition-colors group-focus-within/field:bg-emerald-500" />
-            {t('filters.priceRange')}
-          </label>
-          <select
-            id={`${idPrefix}-price`}
-            value={priceRange}
-            onChange={(e) => onPriceRangeChange(e.target.value as PriceRangeFilter)}
-            className="input-field cursor-pointer transform transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus:-translate-y-0.5 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
-          >
-            {PRICE_RANGE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {priceLabels[option.value] || option.label}
-              </option>
-            ))}
-          </select>
-        </motion.div>
-
-        {/* Sort By Dropdown */}
-        <motion.div variants={itemVariants} className="group/field min-w-0">
-          <label htmlFor={`${idPrefix}-sort`} className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-700 transition-colors duration-200 group-focus-within/field:text-emerald-700 sm:text-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-gray-300 transition-colors group-focus-within/field:bg-emerald-500" />
-            {t('filters.sortBy')}
-          </label>
-          <select
-            id={`${idPrefix}-sort`}
-            value={sortBy}
-            onChange={(e) => onSortByChange(e.target.value as LayoutSortOption)}
-            className="input-field cursor-pointer transform transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus:-translate-y-0.5 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20"
-          >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {sortLabels[option.value] || option.label}
-              </option>
-            ))}
-          </select>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Status Dropdown */}
         {showStatusFilter && onStatusFilterChange && (

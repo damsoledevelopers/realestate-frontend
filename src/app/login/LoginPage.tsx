@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Eye, EyeOff } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
@@ -35,6 +35,8 @@ export default function LoginPage() {
   const { login, user, isAuthenticated, loading: authLoading } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdminLogin = pathname.startsWith('/admin/login');
   const searchParams = useSearchParams();
   const returnTo = searchParams.get('from');
   const [submitError, setSubmitError] = useState('');
@@ -224,8 +226,8 @@ export default function LoginPage() {
   return (
     <>
       <div className="mb-8 text-center lg:text-left">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">{t('auth.login.welcome')}</h1>
-        <p className="mt-2 text-sm text-gray-500">{t('auth.login.subtitleLong')}</p>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">{isAdminLogin ? 'Admin & Super Admin Login' : t('auth.login.welcome')}</h1>
+        <p className="mt-2 text-sm text-gray-500">{isAdminLogin ? 'Authorized dashboard access only. Use your registered admin credentials and phone verification.' : t('auth.login.subtitleLong')}</p>
       </div>
 
       <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-lg shadow-gray-200/50 sm:p-8">
@@ -405,12 +407,12 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <p className="mt-6 text-center text-sm text-gray-500">
+      {!isAdminLogin && <p className="mt-6 text-center text-sm text-gray-500">
         {t('auth.login.noAccount')}{' '}
         <Link href="/register" className="font-semibold text-primary-600 hover:underline">
           {t('auth.login.createAccount')}
         </Link>
-      </p>
+      </p>}
     </>
   );
 }

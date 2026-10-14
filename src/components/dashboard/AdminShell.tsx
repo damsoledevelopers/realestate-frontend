@@ -39,16 +39,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   return (
     <DashboardSearchProvider>
-      <div className="flex h-screen overflow-hidden bg-gray-50">
+      <div className="flex h-dvh min-h-0 w-full min-w-0 overflow-hidden bg-gray-50">
         <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <AdminNavbar
             onMenuClick={() => setSidebarOpen(true)}
             title={title}
             hideTitle={hideNavbarTitle}
             hideDesktopSearch={pathname === '/dashboard'}
           />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
+          <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8"><div className="mx-auto w-full min-w-0 max-w-[1600px]">{children}</div></main>
         </div>
       </div>
     </DashboardSearchProvider>

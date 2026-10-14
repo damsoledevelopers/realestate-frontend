@@ -12,6 +12,7 @@ export interface ManagedLayoutFilters {
   limit?: number;
   search?: string;
   location?: string;
+  state?: string; district?: string; taluka?: string; village?: string; surveyNumber?: string; approvalStatus?: 'all' | 'pending' | 'approved' | 'rejected';
   status?: 'all' | 'active' | 'inactive';
   sortBy?: LayoutSortOption | 'updated' | 'plots';
 }
@@ -22,6 +23,7 @@ function buildManagedLayoutQuery(filters?: ManagedLayoutFilters): string {
   if (filters?.limit) params.set('limit', String(filters.limit));
   if (filters?.search?.trim()) params.set('search', filters.search.trim());
   if (filters?.location?.trim()) params.set('location', filters.location.trim());
+  for (const key of ['state','district','taluka','village','surveyNumber','approvalStatus'] as const) { const value = filters?.[key]; if (typeof value === 'string' && value.trim()) params.set(key, value.trim()); }
   if (filters?.status) params.set('status', filters.status);
   if (filters?.sortBy) params.set('sortBy', filters.sortBy);
 
