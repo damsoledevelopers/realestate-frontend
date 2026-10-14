@@ -32,6 +32,11 @@ export default function LayoutsPageContent() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
+  const [state, setState] = useState('');
+  const [district, setDistrict] = useState('');
+  const [taluka, setTaluka] = useState('');
+  const [village, setVillage] = useState('');
+  const [surveyNumber, setSurveyNumber] = useState('');
   const [priceRange, setPriceRange] = useState<PriceRangeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<LayoutStatusFilter>('active');
   const [sortBy, setSortBy] = useState<LayoutSortOption>('newest');
@@ -39,6 +44,11 @@ export default function LayoutsPageContent() {
   useEffect(() => {
     setSearch(searchParams.get('search') ?? '');
     setLocation(searchParams.get('location') ?? '');
+    setState(searchParams.get('state') ?? '');
+    setDistrict(searchParams.get('district') ?? '');
+    setTaluka(searchParams.get('taluka') ?? '');
+    setVillage(searchParams.get('village') ?? '');
+    setSurveyNumber(searchParams.get('surveyNumber') ?? '');
     setPriceRange(parsePriceRange(searchParams.get('price')));
     setSortBy(parseSortOption(searchParams.get('sort')));
   }, [searchParams]);
@@ -59,9 +69,9 @@ export default function LayoutsPageContent() {
         location,
         priceRange,
         sortBy,
-        statusFilter,
+        statusFilter, state, district, taluka, village, surveyNumber,
       }),
-    [layouts, search, location, priceRange, sortBy, statusFilter]
+    [layouts, search, location, priceRange, sortBy, statusFilter, state, district, taluka, village, surveyNumber]
   );
 
   const hasActiveFilters = hasActiveLayoutFilters({
@@ -69,12 +79,13 @@ export default function LayoutsPageContent() {
     location,
     priceRange,
     sortBy,
-    statusFilter,
+    statusFilter, state, district, taluka, village, surveyNumber,
   });
 
   const clearFilters = () => {
     setSearch('');
     setLocation('');
+    setState(''); setDistrict(''); setTaluka(''); setVillage(''); setSurveyNumber('');
     setPriceRange('all');
     setStatusFilter('active');
     setSortBy('newest');
@@ -151,6 +162,12 @@ export default function LayoutsPageContent() {
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
             locationOptions={locationOptions}
+            state={state} district={district} taluka={taluka} village={village} surveyNumber={surveyNumber}
+            onStateChange={(value) => { setState(value); setDistrict(''); setTaluka(''); setVillage(''); }}
+            onDistrictChange={(value) => { setDistrict(value); setTaluka(''); setVillage(''); }}
+            onTalukaChange={(value) => { setTaluka(value); setVillage(''); }}
+            onVillageChange={setVillage} onSurveyNumberChange={setSurveyNumber}
+            layouts={layouts}
             showStatusFilter
           />
         </div>

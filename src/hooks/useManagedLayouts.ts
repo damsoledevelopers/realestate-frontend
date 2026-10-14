@@ -12,7 +12,7 @@ export function useManagedLayouts(filters: ManagedLayoutFilters = {}) {
         filters.page,
         filters.limit,
         filters.search,
-        filters.location,
+        filters.location, filters.state, filters.district, filters.taluka, filters.village, filters.surveyNumber, filters.approvalStatus,
         filters.status,
         filters.sortBy,
       ]

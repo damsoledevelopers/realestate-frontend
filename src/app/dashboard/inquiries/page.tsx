@@ -12,7 +12,8 @@ import InquiryStatusBadge from '@/components/inquiries/InquiryStatusBadge';
 import { useLocale } from '@/context/LocaleContext';
 
 export default function AdminInquiriesPage() {
-  const { token, isSuperAdmin } = useAuth();
+  const { token, isSuperAdmin, user } = useAuth();
+  const canManageInquiries = isSuperAdmin || user?.role === 'admin';
   const confirm = useConfirm();
   const { t } = useLocale();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -23,7 +24,7 @@ export default function AdminInquiriesPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchInquiries = useCallback(() => {
-    if (!token || !isSuperAdmin) return;
+    if (!token || !canManageInquiries) return;
     setLoading(true);
     setLoadError(null);
     const query = statusFilter ? `?status=${statusFilter}` : '';
@@ -36,13 +37,13 @@ export default function AdminInquiriesPage() {
         notify.error(message);
       })
       .finally(() => setLoading(false));
-  }, [token, statusFilter, t, isSuperAdmin]);
+  }, [token, statusFilter, t, canManageInquiries]);
 
   useEffect(() => {
     fetchInquiries();
   }, [fetchInquiries]);
 
-  if (!isSuperAdmin) {
+  if (!canManageInquiries) {
     return (
       <div className="dashboard-page">
         <div className="card py-12 text-center">
@@ -79,7 +80,7 @@ export default function AdminInquiriesPage() {
   };
 
   const remove = async (id: string) => {
-    if (!token) return;
+    if (!token || !isSuperAdmin) return;
     const confirmed = await confirm({
       title: t('dashboard.inquiries.deleteTitle'),
       message: t('dashboard.inquiries.deleteMessage'),
@@ -113,6 +114,55 @@ export default function AdminInquiriesPage() {
     if (inquiry.status !== 'replied') {
       updateStatus(inquiry._id, 'replied');
     }
+  };
+
+  const replyWhatsApp = (inquiry: Inquiry) => {
+    const phone = (inquiry.phone || '').replace(/[^0-9]/g, '');
+    if (!phone) { notify.warning('This enquiry has no phone number for WhatsApp.'); return; }
+    const coords = inquiry.layoutCoordinates;
+    const mapLink = coords?.lat != null && coords?.lng != null
+      ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}`
+      : inquiry.layoutLocation ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(inquiry.layoutLocation)}` : '';
+    const message = [
+      `Hi ${inquiry.name}, thank you for your enquiry.`,
+      inquiry.layoutName ? `Layout: ${inquiry.layoutName}` : '',
+      inquiry.plotNumber ? `Plot: ${inquiry.plotNumber}` : '',
+      inquiry.surveyNumber ? `Survey/Gat No.: ${inquiry.surveyNumber}` : '',
+      inquiry.layoutLocation ? `Location: ${inquiry.layoutLocation}` : '',
+      mapLink ? `Google Maps: ${mapLink}` : '',
+      `Your enquiry: ${inquiry.message}`,
+      'Please let us know if you need any further details.'
+    ].filter(Boolean).join('\n');
+    const normalizedPhone = phone.length === 10 ? `91${phone}` : phone;
+    window.open(`https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  // Opens WhatsApp with the selected layout's Google Maps link pre-filled.
+  // WhatsApp requires the admin to press Send; browsers cannot send a message silently.
+  const shareMapWhatsApp = (inquiry: Inquiry) => {
+    const phone = (inquiry.phone || '').replace(/[^0-9]/g, '');
+    if (!phone) {
+      notify.warning('This enquiry has no phone number for WhatsApp.');
+      return;
+    }
+
+    const coords = inquiry.layoutCoordinates;
+    // Prefer exact coordinates, then the saved address, and finally the layout/subject
+    // so the button still works for older enquiries that don't have location fields.
+    const searchQuery = inquiry.layoutLocation || inquiry.layoutName || inquiry.subject;
+    const mapLink = coords?.lat != null && coords?.lng != null
+      ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery || 'real estate layout')}`;
+
+    const message = [
+      `Hi ${inquiry.name}, here is the map location you requested:`,
+      inquiry.layoutName ? `Layout: ${inquiry.layoutName}` : '',
+      inquiry.plotNumber ? `Plot: ${inquiry.plotNumber}` : '',
+      inquiry.layoutLocation ? `Location: ${inquiry.layoutLocation}` : '',
+      mapLink,
+    ].filter(Boolean).join('\n');
+    const normalizedPhone = phone.length === 10 ? `91${phone}` : phone;
+    window.open(`https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -211,6 +261,20 @@ export default function AdminInquiriesPage() {
                 <dt className="text-gray-500">{t('dashboard.inquiries.subject')}</dt>
                 <dd className="font-medium">{selected.subject}</dd>
               </div>
+              {(selected.layoutName || selected.layoutLocation || selected.plotNumber || selected.surveyNumber) && (
+                <div className="rounded-lg border border-gray-200 p-3">
+                  <dt className="text-gray-500">Layout / Plot details</dt>
+                  {selected.layoutName && <dd className="font-medium">{selected.layoutName}</dd>}
+                  {selected.plotNumber && <dd>Plot: {selected.plotNumber}</dd>}
+                  {selected.surveyNumber && <dd>Survey/Gat No.: {selected.surveyNumber}</dd>}
+                  {selected.layoutLocation && <dd className="text-gray-600">{selected.layoutLocation}</dd>}
+                  {selected.layoutCoordinates?.lat != null && selected.layoutCoordinates?.lng != null ? (
+                    <dd><a className="text-primary-700 underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${selected.layoutCoordinates.lat},${selected.layoutCoordinates.lng}`}>Open Google Maps location</a></dd>
+                  ) : selected.layoutLocation ? (
+                    <dd><a className="text-primary-700 underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.layoutLocation)}`}>Search location in Google Maps</a></dd>
+                  ) : null}
+                </div>
+              )}
               <div>
                 <dt className="text-gray-500">{t('dashboard.inquiries.received')}</dt>
                 <dd>{new Date(selected.createdAt).toLocaleString()}</dd>
@@ -224,6 +288,20 @@ export default function AdminInquiriesPage() {
             </dl>
 
             <div className="mt-6 flex flex-wrap gap-2">
+              <button type="button" onClick={() => replyWhatsApp(selected)} disabled={!selected.phone || actionLoading} className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">Reply on WhatsApp</button>
+              <button
+                type="button"
+                onClick={() => shareMapWhatsApp(selected)}
+                disabled={!selected.phone || actionLoading}
+                title="Open WhatsApp with the layout map link pre-filled"
+                className="inline-flex items-center gap-2 rounded-xl border border-green-600 bg-white px-4 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
+                  <circle cx="12" cy="9" r="2.2" />
+                </svg>
+                Share Map on WhatsApp
+              </button>
               <button
                 type="button"
                 onClick={() => replyMailto(selected)}

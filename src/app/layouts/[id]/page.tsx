@@ -169,8 +169,23 @@ export default function LayoutDetailPage() {
         className="section-container py-6 lg:py-8"
       />
 
-      <AmenitiesSection />
+      <AmenitiesSection amenities={(layout.visibleAmenities ?? layout.amenities ?? [])} />
+      {!!layout.attachments?.some((item) => item.visible) && (
+        <section className="bg-white py-8"><div className="section-container"><h2 className="mb-4 text-xl font-semibold text-gray-900">Attachments & Documents</h2><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{layout.attachments.filter((item) => item.visible).map((item, index) => <a key={`${item.name}-${index}`} href={item.url} target="_blank" rel="noreferrer" className="rounded-xl border border-gray-200 p-4 text-sm font-medium text-primary-700 hover:bg-gray-50">{item.name} ↗</a>)}</div></div></section>
+      )}
 
+      {layout.downloadLink && (
+        <section className="section-container py-4">
+          <a href={layout.downloadLink} target="_blank" rel="noopener noreferrer" download className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700">
+            Download File ↓
+          </a>
+        </section>
+      )}
+      {!!layout.documents?.some((item) => item.visible !== false) && (
+        <section className="bg-white py-8"><div className="section-container"><h2 className="mb-4 text-xl font-semibold text-gray-900">Layout PDFs</h2><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{layout.documents.filter((item) => item.visible !== false).map((item, index) => <a key={`${item.url}-${index}`} href={item.url} target="_blank" rel="noreferrer" download className="rounded-xl border border-gray-200 p-4 text-sm font-medium text-primary-700 hover:bg-gray-50">{item.name} ↓</a>)}</div></div></section>
+      )}
+
+      {layout.showSitePlan !== false && (
       <AnimatedSection id="plot-map-section" className="section-container py-6 lg:py-8">
         <div className="premium-card !p-4 sm:!p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -201,6 +216,7 @@ export default function LayoutDetailPage() {
           />
         </div>
       </AnimatedSection>
+      )}
 
       <LocationAdvantages layout={layout} />
 
@@ -217,6 +233,9 @@ export default function LayoutDetailPage() {
       <div ref={inquiryRef}>
         <LayoutInquiryForm
           layoutName={localizedLayoutName}
+          layoutId={layout._id}
+          layoutLocation={layout.location}
+          layoutCoordinates={layout.coordinates}
           selectedPlot={enquiryPlot}
           onClearPlot={() => setEnquiryPlot(null)}
         />

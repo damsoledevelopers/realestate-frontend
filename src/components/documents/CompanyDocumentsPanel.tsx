@@ -30,12 +30,21 @@ interface CompanyDocumentsPanelProps {
   layoutId: string;
   layoutName: string;
   canManage?: boolean;
+  /** Images uploaded through the Add/Edit Layout form. */
+  layoutImages?: string[];
+  /** Images hidden from the public website remain visible to managers here. */
+  hiddenImages?: string[];
+  /** Files uploaded directly on the layout form. */
+  layoutFiles?: Array<{ name: string; url: string; visible?: boolean; mimeType?: string }>;
 }
 
 export default function CompanyDocumentsPanel({
   layoutId,
   layoutName,
   canManage = true,
+  layoutImages = [],
+  hiddenImages = [],
+  layoutFiles = [],
 }: CompanyDocumentsPanelProps) {
   const { token } = useAuth();
   const { t } = useLocale();
@@ -143,8 +152,78 @@ export default function CompanyDocumentsPanel({
       }
     : null;
 
+  const savedLayoutImages = Array.from(new Set(layoutImages.filter((url) => typeof url === 'string' && url.trim())));
+  const savedLayoutFiles = layoutFiles.filter((file) => file && typeof file.url === 'string' && file.url.trim());
+
   return (
     <div className="space-y-6">
+      {(savedLayoutImages.length > 0 || savedLayoutFiles.length > 0) && (
+        <section className="card space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{t('companyDocuments.layoutUploadsTitle')}</h3>
+              <p className="mt-1 text-sm text-gray-500">{t('companyDocuments.layoutUploadsSubtitle')}</p>
+            </div>
+            <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
+              {t('companyDocuments.imageCount', { count: savedLayoutImages.length + savedLayoutFiles.length })}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {savedLayoutImages.map((url, index) => {
+              const isHidden = hiddenImages.includes(url);
+              return (
+                <article key={`${url}-${index}`} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                  <a href={url} target="_blank" rel="noreferrer" className="block bg-gray-50">
+                    <img
+                      src={url}
+                      alt={t('companyDocuments.layoutImageAlt', { index: index + 1 })}
+                      loading="lazy"
+                      className="h-48 w-full object-cover"
+                    />
+                  </a>
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-3">
+                    <span className="text-sm font-medium text-gray-800">
+                      {t('companyDocuments.layoutImageLabel', { index: index + 1 })}
+                    </span>
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${isHidden ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-700'}`}>
+                      {isHidden ? t('companyDocuments.hiddenFromWebsite') : t('companyDocuments.visibleOnWebsite')}
+                    </span>
+                    <a href={url} target="_blank" rel="noreferrer" className="ml-auto text-sm font-semibold text-primary-700 hover:underline">
+                      {t('companyDocuments.openImage')} ↗
+                    </a>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          {savedLayoutFiles.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {savedLayoutFiles.map((file, index) => {
+                const isImage = (file.mimeType || '').startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|avif)(\?|$)/i.test(file.url);
+                return (
+                  <article key={`${file.url}-${index}`} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                    {isImage ? (
+                      <a href={file.url} target="_blank" rel="noreferrer" className="block bg-gray-50">
+                        <img src={file.url} alt={file.name || `Layout file ${index + 1}`} loading="lazy" className="h-48 w-full object-cover" />
+                      </a>
+                    ) : (
+                      <div className="flex h-24 items-center justify-center bg-gray-50"><Files className="h-9 w-9 text-gray-400" /></div>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-3">
+                      <span className="min-w-0 break-words text-sm font-medium text-gray-800">{file.name || t('companyDocuments.layoutImageLabel', { index: index + 1 })}</span>
+                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${file.visible === false ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-700'}`}>
+                        {file.visible === false ? t('companyDocuments.hiddenFromWebsite') : t('companyDocuments.visibleOnWebsite')}
+                      </span>
+                      <a href={file.url} target="_blank" rel="noreferrer" className="ml-auto text-sm font-semibold text-primary-700 hover:underline">{t('companyDocuments.openImage')} ↗</a>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">

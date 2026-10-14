@@ -1,3 +1,4 @@
+
 'use client';
 
 import { motion } from 'framer-motion';
@@ -5,7 +6,18 @@ import AnimatedSection from '@/components/layouts/detail/AnimatedSection';
 import SectionHeading from '@/components/layouts/detail/SectionHeading';
 import { useLocale } from '@/context/LocaleContext';
 
-const AMENITY_KEYS = [
+type AmenityDefinition = {
+  key: string;
+  icon: () => JSX.Element;
+};
+
+type DisplayAmenity = {
+  key: string;
+  label: string;
+  icon: () => JSX.Element;
+};
+
+const AMENITY_KEYS: AmenityDefinition[] = [
   { key: 'detail.amenity.security', icon: SecurityIcon },
   { key: 'detail.amenity.water', icon: WaterIcon },
   { key: 'detail.amenity.lights', icon: LightsIcon },
@@ -14,10 +26,26 @@ const AMENITY_KEYS = [
   { key: 'detail.amenity.parking', icon: ParkingIcon },
   { key: 'detail.amenity.club', icon: ClubIcon },
   { key: 'detail.amenity.play', icon: PlayIcon },
-] as const;
+];
 
-export default function AmenitiesSection() {
+export default function AmenitiesSection({
+  amenities = [],
+}: {
+  amenities?: string[];
+}) {
   const { t } = useLocale();
+
+  const displayAmenities: DisplayAmenity[] = amenities.length
+    ? amenities.map((label, index) => ({
+        key: `custom-${index}-${label}`,
+        label,
+        icon: AMENITY_KEYS[index % AMENITY_KEYS.length].icon,
+      }))
+    : AMENITY_KEYS.map((item) => ({
+        key: item.key,
+        label: t(item.key),
+        icon: item.icon,
+      }));
 
   return (
     <AnimatedSection className="bg-white py-8 lg:py-10">
@@ -28,9 +56,11 @@ export default function AmenitiesSection() {
           subtitle={t('detail.amenities.subtitle')}
           align="center"
         />
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {AMENITY_KEYS.map((item, index) => {
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {displayAmenities.map((item, index) => {
             const Icon = item.icon;
+
             return (
               <motion.div
                 key={item.key}
@@ -44,7 +74,10 @@ export default function AmenitiesSection() {
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 text-primary-700 transition group-hover:from-primary-600 group-hover:to-primary-700 group-hover:text-white group-hover:shadow-lg">
                   <Icon />
                 </div>
-                <p className="text-sm font-semibold text-gray-800">{t(item.key)}</p>
+
+                <p className="text-sm font-semibold text-gray-800">
+                  {item.label}
+                </p>
               </motion.div>
             );
           })}

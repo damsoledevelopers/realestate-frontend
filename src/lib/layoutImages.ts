@@ -32,8 +32,11 @@ export function isLocalPlaceholderImage(src: string): boolean {
 
 /** Uploaded layout photos only — empty when none exist */
 export function getLayoutImages(layout: Pick<Layout, 'images' | 'imageUrl'>): string[] {
-  if (layout.images?.length) return resolveMediaUrls(layout.images);
-  if (layout.imageUrl) return [resolveMediaUrl(layout.imageUrl)].filter(Boolean);
+  if (layout.images?.length) {
+    const hidden = new Set((layout as Pick<Layout, 'hiddenImages'>).hiddenImages || []);
+    return resolveMediaUrls(layout.images).filter((url, index) => !hidden.has(url) && !hidden.has(layout.images?.[index] || ''));
+  }
+  if (layout.imageUrl && !(layout as Pick<Layout, 'hiddenImages'>).hiddenImages?.includes(layout.imageUrl)) return [resolveMediaUrl(layout.imageUrl)].filter(Boolean);
   return [];
 }
 

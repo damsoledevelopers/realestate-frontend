@@ -1,8 +1,8 @@
-export type AppRole = 'super_admin' | 'user' | 'customer' | 'admin';
+export type AppRole = 'super_admin' | 'user' | 'partner' | 'customer' | 'admin';
 export type DashboardRequestStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export function isAdminLoginRole(role?: string | null): boolean {
-  return role === 'super_admin' || role === 'user' || role === 'admin';
+  return role === 'super_admin' || role === 'user' || role === 'partner' || role === 'admin';
 }
 
 export function isSuperAdminRole(role?: string | null): boolean {
@@ -29,11 +29,11 @@ export function wasDashboardRequestRejected(
   return status === 'rejected';
 }
 
-/** Legacy `admin` is treated the same as `user` (layout manager). */
+/** Admin is a restricted enquiry-only staff role. */
 export function normalizeAppRole(role?: string | null): AppRole | null {
   if (!role) return null;
-  if (role === 'admin') return 'user';
-  if (role === 'super_admin' || role === 'user' || role === 'customer') return role;
+  if (role === 'admin') return 'admin';
+  if (role === 'super_admin' || role === 'user' || role === 'partner' || role === 'customer') return role;
   return null;
 }
 
@@ -44,10 +44,12 @@ export function formatRoleLabel(role?: string | null): string {
       return 'Super Admin';
     case 'user':
       return 'Layout User';
+    case 'partner':
+      return 'Partner';
     case 'customer':
       return 'Customer';
     case 'admin':
-      return 'User';
+      return 'Admin';
     default:
       return role || 'Unknown';
   }

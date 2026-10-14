@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -17,8 +18,15 @@ import { getLocationOptions } from '@/lib/localizedText';
 export default function FeaturedLayouts() {
   const { t, locale } = useLocale();
   const { data: layouts = [], error, isLoading, mutate } = useLayouts('active');
+
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
+  const [state, setState] = useState('');
+  const [district, setDistrict] = useState('');
+  const [taluka, setTaluka] = useState('');
+  const [village, setVillage] = useState('');
+  const [surveyNumber, setSurveyNumber] = useState('');
+
   const [priceRange, setPriceRange] = useState<PriceRangeFilter>('all');
   const [sortBy, setSortBy] = useState<LayoutSortOption>('newest');
 
@@ -35,8 +43,24 @@ export default function FeaturedLayouts() {
         priceRange,
         sortBy,
         statusFilter: 'active',
+        state,
+        district,
+        taluka,
+        village,
+        surveyNumber,
       }),
-    [layouts, search, location, priceRange, sortBy]
+    [
+      layouts,
+      search,
+      location,
+      priceRange,
+      sortBy,
+      state,
+      district,
+      taluka,
+      village,
+      surveyNumber,
+    ]
   );
 
   const hasFilters = hasActiveLayoutFilters({
@@ -45,13 +69,25 @@ export default function FeaturedLayouts() {
     priceRange,
     sortBy,
     statusFilter: 'active',
+    state,
+    district,
+    taluka,
+    village,
+    surveyNumber,
   });
 
-  const displayedLayouts = hasFilters ? filteredLayouts : filteredLayouts.slice(0, 3);
+  const displayedLayouts = hasFilters
+    ? filteredLayouts
+    : filteredLayouts.slice(0, 3);
 
   const clearFilters = () => {
     setSearch('');
     setLocation('');
+    setState('');
+    setDistrict('');
+    setTaluka('');
+    setVillage('');
+    setSurveyNumber('');
     setPriceRange('all');
     setSortBy('newest');
   };
@@ -59,8 +95,12 @@ export default function FeaturedLayouts() {
   return (
     <section className="mx-auto w-full min-w-0 max-w-7xl overflow-x-hidden px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold sm:text-3xl">{t('home.featured.title')}</h2>
-        <p className="mt-2 text-gray-500">{t('home.featured.subtitle')}</p>
+        <h2 className="text-2xl font-bold sm:text-3xl">
+          {t('home.featured.title')}
+        </h2>
+        <p className="mt-2 text-gray-500">
+          {t('home.featured.subtitle')}
+        </p>
       </div>
 
       <div className="mt-8 min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/80 p-3 sm:p-5">
@@ -75,13 +115,38 @@ export default function FeaturedLayouts() {
           sortBy={sortBy}
           onSortByChange={setSortBy}
           locationOptions={locationOptions}
+          layouts={layouts}
+          state={state}
+          district={district}
+          taluka={taluka}
+          village={village}
+          surveyNumber={surveyNumber}
+          onStateChange={(value) => {
+            setState(value);
+            setDistrict('');
+            setTaluka('');
+            setVillage('');
+          }}
+          onDistrictChange={(value) => {
+            setDistrict(value);
+            setTaluka('');
+            setVillage('');
+          }}
+          onTalukaChange={(value) => {
+            setTaluka(value);
+            setVillage('');
+          }}
+          onVillageChange={setVillage}
+          onSurveyNumberChange={setSurveyNumber}
         />
 
         {hasFilters && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-gray-600">
-              {t('layouts.showing')} {filteredLayouts.length} {t('layouts.layouts')}
+              {t('layouts.showing')} {filteredLayouts.length}{' '}
+              {t('layouts.layouts')}
             </p>
+
             <button
               type="button"
               onClick={clearFilters}
@@ -99,12 +164,22 @@ export default function FeaturedLayouts() {
         ))}
       </div>
 
-      {isLoading && <p className="mt-8 text-center text-gray-400">{t('home.featured.loading')}</p>}
+      {isLoading && (
+        <p className="mt-8 text-center text-gray-400">
+          {t('home.featured.loading')}
+        </p>
+      )}
 
       {error && (
         <div className="mt-8 text-center">
-          <p className="text-red-500">{t('home.featured.error')}</p>
-          <button type="button" onClick={() => mutate()} className="btn-primary mt-4">
+          <p className="text-red-500">
+            {t('home.featured.error')}
+          </p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="btn-primary mt-4"
+          >
             {t('layouts.retry')}
           </button>
         </div>
@@ -113,10 +188,17 @@ export default function FeaturedLayouts() {
       {!isLoading && !error && filteredLayouts.length === 0 && (
         <div className="mt-8 text-center">
           <p className="text-gray-400">
-            {hasFilters ? t('layouts.noMatch') : t('layouts.none')}
+            {hasFilters
+              ? t('layouts.noMatch')
+              : t('layouts.none')}
           </p>
+
           {hasFilters && (
-            <button type="button" onClick={clearFilters} className="btn-secondary mt-4">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="btn-secondary mt-4"
+            >
               {t('layouts.clearFilters')}
             </button>
           )}
