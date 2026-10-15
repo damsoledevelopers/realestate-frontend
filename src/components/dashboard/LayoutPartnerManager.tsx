@@ -33,7 +33,6 @@ export default function LayoutPartnerManager({
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -55,18 +54,16 @@ export default function LayoutPartnerManager({
   const resetForm = () => {
     setName('');
     setEmail('');
-    setPhone('');
     setPassword('');
   };
 
   const addPartner = async (e: FormEvent) => {
     e.preventDefault();
-    if (!token || !email.trim() || !phone.trim()) return;
+    if (!token || !email.trim()) return;
     setAdding(true);
     try {
-      const payload: { email: string; phone: string; name?: string; password?: string } = {
+      const payload: { email: string; name?: string; password?: string } = {
         email: email.trim(),
-        phone: phone.trim(),
       };
       if (name.trim()) payload.name = name.trim();
       if (password) payload.password = password;
@@ -78,9 +75,7 @@ export default function LayoutPartnerManager({
       );
 
       if (result.accountCreated) {
-        notify.success(
-          'Partner account created. Share their registered mobile number for OTP verification, then email and password at /login.'
-        );
+        notify.success('User account created and assigned to this layout.');
       } else if (result.accountPromoted) {
         notify.success('Partner added. They can sign in with their existing credentials.');
       } else {
@@ -154,7 +149,6 @@ export default function LayoutPartnerManager({
               <div className="min-w-0">
                 <p className="truncate font-medium text-gray-900">{partner.user.name}</p>
                 <p className="truncate text-xs text-gray-500">{partner.user.email}</p>
-                {partner.user.phone && <p className="truncate text-xs text-gray-500">Mobile: {partner.user.phone}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="text-xs text-gray-400">{formatRoleLabel(partner.user.role)}</span>
@@ -177,9 +171,9 @@ export default function LayoutPartnerManager({
       {isOwner && (
         <form onSubmit={addPartner} className="mt-4 space-y-3">
           <p className="text-xs text-gray-500">
-            Enter the partner's name, email, registered mobile number and a temporary password for new accounts. Partner login requires phone OTP verification followed by email and password.
+            Assign an existing user by email, or create a user account with a name and temporary password. No separate partner login or mobile number is needed.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <input
               type="text"
               value={name}
@@ -195,15 +189,7 @@ export default function LayoutPartnerManager({
               className="input-field text-sm"
               required
             />
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^0-9+()\-\s]/g, ''))}
-              placeholder="Partner mobile number (OTP login)"
-              className="input-field text-sm"
-              autoComplete="tel"
-              required
-            />
+
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input

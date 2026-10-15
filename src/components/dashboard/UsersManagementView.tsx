@@ -82,7 +82,7 @@ export default function UsersManagementView() {
 
 const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
 
-  const updateRole = async (user: User, role: 'super_admin' | 'user' | 'customer') => {
+  const updateRole = async (user: User, role: 'super_admin' | 'user' | 'customer' | 'admin') => {
     if (!token || user.role === role) return;
     const isElevation = role === 'super_admin' && user.role !== 'super_admin';
     if (
@@ -331,12 +331,13 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
                         value={user.role}
                         disabled={isSelf(user._id) || actionLoading === user._id}
                         onChange={(e) =>
-                          updateRole(user, e.target.value as 'super_admin' | 'user' | 'customer')
+                          updateRole(user, e.target.value as 'super_admin' | 'user' | 'customer' | 'admin')
                         }
                         className="rounded-lg border border-gray-200 px-2 py-1 text-xs capitalize"
                       >
                         <option value="customer">{t('dashboard.users.role.customer')}</option>
                         <option value="user">{t('dashboard.users.role.user')}</option>
+                        <option value="admin">Admin</option>
                         <option value="super_admin">{t('dashboard.users.role.superAdmin')}</option>
                       </select>
                     </td>

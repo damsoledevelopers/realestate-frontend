@@ -1,91 +1,9 @@
-
 'use client';
 
 import { motion } from 'framer-motion';
 import AnimatedSection from '@/components/layouts/detail/AnimatedSection';
 import SectionHeading from '@/components/layouts/detail/SectionHeading';
 import { useLocale } from '@/context/LocaleContext';
-
-type AmenityDefinition = {
-  key: string;
-  icon: () => JSX.Element;
-};
-
-type DisplayAmenity = {
-  key: string;
-  label: string;
-  icon: () => JSX.Element;
-};
-
-const AMENITY_KEYS: AmenityDefinition[] = [
-  { key: 'detail.amenity.security', icon: SecurityIcon },
-  { key: 'detail.amenity.water', icon: WaterIcon },
-  { key: 'detail.amenity.lights', icon: LightsIcon },
-  { key: 'detail.amenity.roads', icon: RoadsIcon },
-  { key: 'detail.amenity.garden', icon: GardenIcon },
-  { key: 'detail.amenity.parking', icon: ParkingIcon },
-  { key: 'detail.amenity.club', icon: ClubIcon },
-  { key: 'detail.amenity.play', icon: PlayIcon },
-];
-
-export default function AmenitiesSection({
-  amenities = [],
-}: {
-  amenities?: string[];
-}) {
-  const { t } = useLocale();
-
-  const displayAmenities: DisplayAmenity[] = amenities.length
-    ? amenities.map((label, index) => ({
-        key: `custom-${index}-${label}`,
-        label,
-        icon: AMENITY_KEYS[index % AMENITY_KEYS.length].icon,
-      }))
-    : AMENITY_KEYS.map((item) => ({
-        key: item.key,
-        label: t(item.key),
-        icon: item.icon,
-      }));
-
-  return (
-    <AnimatedSection className="bg-white py-8 lg:py-10">
-      <div className="section-container">
-        <SectionHeading
-          eyebrow={t('detail.amenities.eyebrow')}
-          title={t('detail.amenities.title')}
-          subtitle={t('detail.amenities.subtitle')}
-          align="center"
-        />
-
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {displayAmenities.map((item, index) => {
-            const Icon = item.icon;
-
-            return (
-              <motion.div
-                key={item.key}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -6 }}
-                className="group flex flex-col items-center rounded-2xl border border-gray-100 bg-surface p-6 text-center shadow-sm transition hover:border-primary-200 hover:shadow-premium"
-              >
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 text-primary-700 transition group-hover:from-primary-600 group-hover:to-primary-700 group-hover:text-white group-hover:shadow-lg">
-                  <Icon />
-                </div>
-
-                <p className="text-sm font-semibold text-gray-800">
-                  {item.label}
-                </p>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-    </AnimatedSection>
-  );
-}
 
 function SecurityIcon() {
   return (
@@ -148,5 +66,81 @@ function PlayIcon() {
     <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
+  );
+}
+
+const AMENITY_KEYS = [
+  { key: 'detail.amenity.security', icon: SecurityIcon },
+  { key: 'detail.amenity.water', icon: WaterIcon },
+  { key: 'detail.amenity.lights', icon: LightsIcon },
+  { key: 'detail.amenity.roads', icon: RoadsIcon },
+  { key: 'detail.amenity.garden', icon: GardenIcon },
+  { key: 'detail.amenity.parking', icon: ParkingIcon },
+  { key: 'detail.amenity.club', icon: ClubIcon },
+  { key: 'detail.amenity.play', icon: PlayIcon },
+] as const;
+
+type AmenityItem = {
+  key: string;
+  label: string;
+  icon: () => React.JSX.Element;
+};
+
+export default function AmenitiesSection({
+  amenities = [],
+}: {
+  amenities?: string[];
+}) {
+  const { t } = useLocale();
+
+  const displayAmenities: AmenityItem[] = amenities.length
+    ? amenities.map((label, index) => ({
+        key: `custom-${index}-${label}`,
+        label,
+        icon: AMENITY_KEYS[index % AMENITY_KEYS.length].icon,
+      }))
+    : AMENITY_KEYS.map((item) => ({
+        key: item.key,
+        label: t(item.key),
+        icon: item.icon,
+      }));
+
+  return (
+    <AnimatedSection className="bg-white py-8 lg:py-10">
+      <div className="section-container">
+        <SectionHeading
+          eyebrow={t('detail.amenities.eyebrow')}
+          title={t('detail.amenities.title')}
+          subtitle={t('detail.amenities.subtitle')}
+          align="center"
+        />
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {displayAmenities.map((item, index) => {
+            const Icon = item.icon;
+
+            return (
+              <motion.div
+                key={item.key}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -6 }}
+                className="group flex flex-col items-center rounded-2xl border border-gray-100 bg-surface p-6 text-center shadow-sm transition hover:border-primary-200 hover:shadow-premium"
+              >
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 text-primary-700 transition group-hover:from-primary-600 group-hover:to-primary-700 group-hover:text-white group-hover:shadow-lg">
+                  <Icon />
+                </div>
+
+                <p className="text-sm font-semibold text-gray-800">
+                  {item.label}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </AnimatedSection>
   );
 }

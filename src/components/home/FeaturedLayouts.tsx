@@ -27,6 +27,7 @@ export default function FeaturedLayouts() {
   const [village, setVillage] = useState('');
   const [surveyNumber, setSurveyNumber] = useState('');
 
+  // Keep filter values in state so LayoutFiltersBar can update them.
   const [priceRange, setPriceRange] = useState<PriceRangeFilter>('all');
   const [sortBy, setSortBy] = useState<LayoutSortOption>('newest');
 
@@ -35,20 +36,21 @@ export default function FeaturedLayouts() {
     [layouts, locale]
   );
 
+  const filterOptions = {
+    search,
+    location,
+    priceRange,
+    sortBy,
+    statusFilter: 'active' as const,
+    state,
+    district,
+    taluka,
+    village,
+    surveyNumber,
+  };
+
   const filteredLayouts = useMemo(
-    () =>
-      filterAndSortLayouts(layouts, {
-        search,
-        location,
-        priceRange,
-        sortBy,
-        statusFilter: 'active',
-        state,
-        district,
-        taluka,
-        village,
-        surveyNumber,
-      }),
+    () => filterAndSortLayouts(layouts, filterOptions),
     [
       layouts,
       search,
@@ -63,18 +65,7 @@ export default function FeaturedLayouts() {
     ]
   );
 
-  const hasFilters = hasActiveLayoutFilters({
-    search,
-    location,
-    priceRange,
-    sortBy,
-    statusFilter: 'active',
-    state,
-    district,
-    taluka,
-    village,
-    surveyNumber,
-  });
+  const hasFilters = hasActiveLayoutFilters(filterOptions);
 
   const displayedLayouts = hasFilters
     ? filteredLayouts
@@ -172,9 +163,7 @@ export default function FeaturedLayouts() {
 
       {error && (
         <div className="mt-8 text-center">
-          <p className="text-red-500">
-            {t('home.featured.error')}
-          </p>
+          <p className="text-red-500">{t('home.featured.error')}</p>
           <button
             type="button"
             onClick={() => mutate()}
@@ -188,9 +177,7 @@ export default function FeaturedLayouts() {
       {!isLoading && !error && filteredLayouts.length === 0 && (
         <div className="mt-8 text-center">
           <p className="text-gray-400">
-            {hasFilters
-              ? t('layouts.noMatch')
-              : t('layouts.none')}
+            {hasFilters ? t('layouts.noMatch') : t('layouts.none')}
           </p>
 
           {hasFilters && (

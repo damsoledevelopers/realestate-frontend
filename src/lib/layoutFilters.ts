@@ -1,4 +1,3 @@
-
 import { Layout } from '@/lib/types';
 import { LayoutStatusFilter } from '@/hooks/useLayouts';
 
@@ -126,7 +125,7 @@ export function getLayoutLocationParts(
     ? parts.findIndex((part) => includesCI(part, state))
     : -1;
 
-  // Legacy address fallback: the token before state is usually district/city.
+  // Legacy address fallback: token immediately before state.
   const district =
     normalize(record.district) ||
     (stateIndex > 0 ? parts[stateIndex - 1] : '');
@@ -173,7 +172,10 @@ export function getDependentLocationOptions(
       continue;
     }
 
-    if (filters.taluka && !includesCI(parts.taluka, filters.taluka)) {
+    if (
+      filters.taluka &&
+      !includesCI(parts.taluka, filters.taluka)
+    ) {
       continue;
     }
 
@@ -184,8 +186,9 @@ export function getDependentLocationOptions(
     }
   }
 
-  // Array.from avoids the Set spread-iteration TypeScript error.
-  return Array.from(values).sort((a, b) => a.localeCompare(b));
+  return Array.from(values).sort((a, b) =>
+    a.localeCompare(b)
+  );
 }
 
 function matchesPriceRange(
@@ -249,7 +252,10 @@ export function filterAndSortLayouts(
   const surveyQuery = surveyNumber.trim().toLowerCase();
 
   let result = layouts.filter((layout) => {
-    if (statusFilter === 'active' && layout.status !== 'active') {
+    if (
+      statusFilter === 'active' &&
+      layout.status !== 'active'
+    ) {
       return false;
     }
 
@@ -280,13 +286,8 @@ export function filterAndSortLayouts(
     const plots = Array.isArray(layout.plots) ? layout.plots : [];
 
     if (surveyQuery) {
-      const layoutSurvey = normalize(
-        layoutRecord.surveyNumber
-      ).toLowerCase();
-
-      const layoutGat = normalize(
-        layoutRecord.gatNumber
-      ).toLowerCase();
+      const layoutSurvey = normalize(layoutRecord.surveyNumber).toLowerCase();
+      const layoutGat = normalize(layoutRecord.gatNumber).toLowerCase();
 
       const plotMatch = plots.some((plot) => {
         const p = plot as unknown as Record<string, unknown>;
@@ -322,9 +323,7 @@ export function filterAndSortLayouts(
       parts.district.toLowerCase().includes(query) ||
       parts.taluka.toLowerCase().includes(query) ||
       parts.village.toLowerCase().includes(query) ||
-      normalize(layoutRecord.surveyNumber)
-        .toLowerCase()
-        .includes(query) ||
+      normalize(layoutRecord.surveyNumber).toLowerCase().includes(query) ||
       plots.some((plot) => {
         const p = plot as unknown as Record<string, unknown>;
 
@@ -339,6 +338,8 @@ export function filterAndSortLayouts(
     );
   });
 
+  // Use slice() rather than spread to preserve compatibility
+  // with older TypeScript targets.
   result = result.slice().sort((a, b) => {
     if (sortBy === 'price') {
       return (
