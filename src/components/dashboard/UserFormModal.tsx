@@ -9,7 +9,7 @@ export interface UserFormValues {
   email: string;
   password: string;
   phone: string;
-  role: 'super_admin' | 'user' | 'customer';
+  role: 'super_admin' | 'user' | 'customer' | 'admin';
   isActive: boolean;
 }
 
@@ -50,10 +50,9 @@ export default function UserFormModal({
         email: initialUser.email,
         password: '',
         phone: initialUser.phone || '',
-        role:
-          initialUser.role === 'super_admin' || initialUser.role === 'customer'
-            ? initialUser.role
-            : 'user',
+        role: ['super_admin', 'customer', 'admin'].includes(initialUser.role)
+          ? (initialUser.role as UserFormValues['role'])
+          : 'user',
         isActive: initialUser.isActive,
       });
     } else {
@@ -159,6 +158,7 @@ export default function UserFormModal({
                 >
                   <option value="customer">{t('dashboard.users.role.customer')}</option>
                   <option value="user">{t('dashboard.users.role.user')}</option>
+                  <option value="admin">Admin</option>
                   <option value="super_admin">{t('dashboard.users.role.superAdmin')}</option>
                 </select>
               </div>
