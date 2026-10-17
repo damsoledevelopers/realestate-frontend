@@ -1,15 +1,19 @@
+
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLayouts } from '@/hooks/useLayouts';
 import {
   buildLayoutsSearchParams,
-  getDependentLocationOptions,
-  INDIA_STATES,
   type LayoutSortOption,
   type PriceRangeFilter,
 } from '@/lib/layoutFilters';
+import {
+  fetchPublicLocationOptions,
+  PUBLIC_LOCATION_STATE,
+} from '@/lib/publicLocationDirectory';
+import { useLocale } from '@/context/LocaleContext';
+import { getLocalizedLocation } from '@/lib/localizedText';
 
 const fieldClassName =
   'box-border w-full min-w-0 max-w-full rounded-xl border border-white/30 bg-white px-3 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 sm:px-4';
@@ -29,7 +33,7 @@ type FilterState = {
 const INITIAL_FILTERS: FilterState = {
   search: '',
   location: '',
-  state: '',
+  state: PUBLIC_LOCATION_STATE,
   district: '',
   taluka: '',
   village: '',
@@ -39,39 +43,33 @@ const INITIAL_FILTERS: FilterState = {
 };
 
 export default function HeroSearchFilter() {
+  const { locale, t } = useLocale();
   const router = useRouter();
-  const { data: layouts = [] } = useLayouts('active');
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
 
   const filtersRef = useRef<FilterState>({ ...INITIAL_FILTERS });
 
   const [search, setSearch] = useState('');
-  const [state, setState] = useState('');
+  const [state, setState] = useState(PUBLIC_LOCATION_STATE);
   const [district, setDistrict] = useState('');
   const [taluka, setTaluka] = useState('');
   const [village, setVillage] = useState('');
   const [surveyNumber, setSurveyNumber] = useState('');
 
-  // Keep the current filters synchronized with component state.
-  filtersRef.current = {
-    ...filtersRef.current,
-    search,
-    location: '',
-    state,
-    district,
-    taluka,
-    village,
-    surveyNumber,
-  };
+  const [districtOptions, setDistrictOptions] = useState<string[]>([]);
+  const [talukas, setTalukas] = useState<string[]>([]);
+  const [villages, setVillages] = useState<string[]>([]);
+  const [locationOptionsError, setLocationOptionsError] = useState('');
 
   const applyFilters = useCallback(
-    (filters: FilterState) => {
-      router.push(buildLayoutsSearchParams(filters));
+    (nextFilters: FilterState) => {
+      filtersRef.current = nextFilters;
+      router.push(buildLayoutsSearchParams(nextFilters));
     },
-    [router]
+    [router],
   );
 
   const update = useCallback(
@@ -82,68 +80,202 @@ export default function HeroSearchFilter() {
       };
 
       filtersRef.current = nextFilters;
+
       applyFilters(nextFilters);
     },
-    [applyFilters]
+    [applyFilters],
   );
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
 
+    // Keep the latest input available even before the debounce finishes.
     filtersRef.current = {
       ...filtersRef.current,
       search: value,
     };
 
-    if (searchTimerRef.current !== null) {
+    if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
     }
 
     searchTimerRef.current = setTimeout(() => {
-      searchTimerRef.current = null;
       update({ search: value });
+      searchTimerRef.current = null;
     }, 350);
   };
 
+  const districts =
+    state === PUBLIC_LOCATION_STATE ? districtOptions : [];
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    setLocationOptionsError('');
+
+    fetchPublicLocationOptions('district', [], controller.signal)
+      .then((options) => {
+        if (!controller.signal.aborted) {
+          setDistrictOptions(options);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setLocationOptionsError(
+            error instanceof Error
+              ? error.message
+              : 'Could not load districts.',
+          );
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!district) {
+      setTalukas([]);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    setTalukas([]);
+    setLocationOptionsError('');
+
+    fetchPublicLocationOptions(
+      'subdistrict',
+      [
+        { field: 'state', value: PUBLIC_LOCATION_STATE },
+        { field: 'district', value: district },
+      ],
+      controller.signal,
+    )
+      .then((options) => {
+        if (!controller.signal.aborted) {
+          setTalukas(options);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setLocationOptionsError(
+            error instanceof Error
+              ? error.message
+              : 'Could not load talukas.',
+          );
+        }
+      });
+
+    return () => controller.abort();
+  }, [district]);
+
+  useEffect(() => {
+    if (!district || !taluka) {
+      setVillages([]);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    setVillages([]);
+    setLocationOptionsError('');
+
+    fetchPublicLocationOptions(
+      'name',
+      [
+        { field: 'state', value: PUBLIC_LOCATION_STATE },
+        { field: 'district', value: district },
+        { field: 'subdistrict', value: taluka },
+      ],
+      controller.signal,
+    )
+      .then((options) => {
+        if (!controller.signal.aborted) {
+          setVillages(options);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setLocationOptionsError(
+            error instanceof Error
+              ? error.message
+              : 'Could not load villages.',
+          );
+        }
+      });
+
+    return () => controller.abort();
+  }, [district, taluka]);
+
   useEffect(() => {
     return () => {
-      if (searchTimerRef.current !== null) {
+      if (searchTimerRef.current) {
         clearTimeout(searchTimerRef.current);
       }
     };
   }, []);
 
-  const districts = getDependentLocationOptions(
-    layouts,
-    'district',
-    { state }
-  );
+  const handleStateChange = () => {
+    setState(PUBLIC_LOCATION_STATE);
+    setDistrict('');
+    setTaluka('');
+    setVillage('');
 
-  const talukas = getDependentLocationOptions(
-    layouts,
-    'taluka',
-    { state, district }
-  );
+    update({
+      state: PUBLIC_LOCATION_STATE,
+      district: '',
+      taluka: '',
+      village: '',
+    });
+  };
 
-  const villages = getDependentLocationOptions(
-    layouts,
-    'village',
-    { state, district, taluka }
-  );
+  const handleDistrictChange = (value: string) => {
+    setDistrict(value);
+    setTaluka('');
+    setVillage('');
 
-  const handleSearchSubmit = () => {
-    if (searchTimerRef.current !== null) {
+    update({
+      district: value,
+      taluka: '',
+      village: '',
+    });
+  };
+
+  const handleTalukaChange = (value: string) => {
+    setTaluka(value);
+    setVillage('');
+
+    update({
+      taluka: value,
+      village: '',
+    });
+  };
+
+  const handleVillageChange = (value: string) => {
+    setVillage(value);
+    update({ village: value });
+  };
+
+  const handleSubmit = () => {
+    if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
       searchTimerRef.current = null;
     }
 
-    applyFilters(filtersRef.current);
+    applyFilters({
+      ...filtersRef.current,
+      search,
+      state,
+      district,
+      taluka,
+      village,
+      surveyNumber,
+    });
   };
 
   return (
     <div className="box-border w-full min-w-0 max-w-full rounded-2xl border border-white/20 bg-white/10 p-3 shadow-2xl backdrop-blur-md sm:p-4 lg:p-5">
       <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Search */}
         <div className="min-w-0 sm:col-span-2">
           <label
             htmlFor="hero-search"
@@ -159,56 +291,31 @@ export default function HeroSearchFilter() {
             onChange={(event) =>
               handleSearchChange(event.target.value)
             }
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                handleSearchSubmit();
-              }
-            }}
             placeholder="Layout name, village name..."
             className={fieldClassName}
           />
         </div>
 
-        {/* State */}
         <div className="min-w-0">
           <label
             htmlFor="hero-state"
             className="mb-1.5 block text-xs font-semibold text-white sm:text-sm"
           >
-            State / UT
+            {t('filters.state')}
           </label>
 
           <select
             id="hero-state"
             value={state}
-            onChange={(event) => {
-              const value = event.target.value;
-
-              setState(value);
-              setDistrict('');
-              setTaluka('');
-              setVillage('');
-
-              update({
-                state: value,
-                district: '',
-                taluka: '',
-                village: '',
-              });
-            }}
+            onChange={handleStateChange}
             className={fieldClassName}
           >
-            <option value="">All States / UTs</option>
-
-            {INDIA_STATES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
+            <option value={PUBLIC_LOCATION_STATE}>
+              {getLocalizedLocation(PUBLIC_LOCATION_STATE, locale)}
+            </option>
           </select>
         </div>
 
-        {/* District */}
         <div className="min-w-0">
           <label
             htmlFor="hero-district"
@@ -221,99 +328,81 @@ export default function HeroSearchFilter() {
             id="hero-district"
             value={district}
             disabled={!state}
-            onChange={(event) => {
-              const value = event.target.value;
-
-              setDistrict(value);
-              setTaluka('');
-              setVillage('');
-
-              update({
-                district: value,
-                taluka: '',
-                village: '',
-              });
-            }}
+            onChange={(event) =>
+              handleDistrictChange(event.target.value)
+            }
             className={`${fieldClassName} disabled:cursor-not-allowed disabled:bg-gray-100`}
           >
-            <option value="">All Districts</option>
+            <option value="">
+              {t('filters.selectDistrict')}
+            </option>
 
             {districts.map((item) => (
               <option key={item} value={item}>
-                {item}
+                {getLocalizedLocation(item, locale)}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Taluka */}
         <div className="min-w-0">
           <label
             htmlFor="hero-taluka"
             className="mb-1.5 block text-xs font-semibold text-white sm:text-sm"
           >
-            Taluka / Tehsil
+            {t('filters.taluka')}
           </label>
 
           <select
             id="hero-taluka"
             value={taluka}
             disabled={!district}
-            onChange={(event) => {
-              const value = event.target.value;
-
-              setTaluka(value);
-              setVillage('');
-
-              update({
-                taluka: value,
-                village: '',
-              });
-            }}
+            onChange={(event) =>
+              handleTalukaChange(event.target.value)
+            }
             className={`${fieldClassName} disabled:cursor-not-allowed disabled:bg-gray-100`}
           >
-            <option value="">All Talukas</option>
+            <option value="">
+              {t('filters.selectTaluka')}
+            </option>
 
             {talukas.map((item) => (
               <option key={item} value={item}>
-                {item}
+                {getLocalizedLocation(item, locale)}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Village */}
         <div className="min-w-0">
           <label
             htmlFor="hero-village"
             className="mb-1.5 block text-xs font-semibold text-white sm:text-sm"
           >
-            Village
+            {t('filters.village')}
           </label>
 
           <select
             id="hero-village"
             value={village}
             disabled={!district}
-            onChange={(event) => {
-              const value = event.target.value;
-
-              setVillage(value);
-              update({ village: value });
-            }}
+            onChange={(event) =>
+              handleVillageChange(event.target.value)
+            }
             className={`${fieldClassName} disabled:cursor-not-allowed disabled:bg-gray-100`}
           >
-            <option value="">All Villages</option>
+            <option value="">
+              {t('filters.selectVillage')}
+            </option>
 
             {villages.map((item) => (
               <option key={item} value={item}>
-                {item}
+                {getLocalizedLocation(item, locale)}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Survey / Gat Number */}
         <div className="min-w-0">
           <label
             htmlFor="hero-survey"
@@ -332,27 +421,27 @@ export default function HeroSearchFilter() {
               setSurveyNumber(value);
               update({ surveyNumber: value });
             }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                handleSearchSubmit();
-              }
-            }}
             placeholder="Enter survey or gat no."
             className={fieldClassName}
           />
         </div>
 
-        {/* Search Button */}
         <div className="flex min-w-0 items-end">
           <button
             type="button"
-            onClick={handleSearchSubmit}
+            onClick={handleSubmit}
             className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white shadow transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-white/80"
           >
             Search Plots / Layouts
           </button>
         </div>
       </div>
+
+      {locationOptionsError && (
+        <p role="status" className="mt-2 text-xs text-red-100">
+          {locationOptionsError}
+        </p>
+      )}
     </div>
   );
 }

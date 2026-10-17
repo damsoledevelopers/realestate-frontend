@@ -209,6 +209,8 @@ export default function DashboardLayoutDetailPage() {
                   latitude={layout.latitude ?? layout.coordinates?.lat ?? 0}
                   longitude={layout.longitude ?? layout.coordinates?.lng ?? 0}
                   title={displayName}
+                  assetId={layout._id}
+                  assetType="layout"
                 />
               </div>
             </div>

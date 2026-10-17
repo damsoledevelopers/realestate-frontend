@@ -24,7 +24,7 @@ export default function AdminLayoutsPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search.trim());
   const [location, setLocation] = useState('');
-  const [state, setState] = useState('');
+  const [state, setState] = useState('Maharashtra');
   const [district, setDistrict] = useState('');
   const [taluka, setTaluka] = useState('');
   const [village, setVillage] = useState('');
@@ -114,7 +114,7 @@ export default function AdminLayoutsPage() {
           {Array.from({ length: 6 }).map((_, i) => <LayoutCardSkeleton key={i} />)}
         </div>
       ) : layouts.length === 0 ? (
-        <LayoutsEmptyState hasFilters onClearFilters={() => { setSearch(''); setLocation(''); setState(''); setDistrict(''); setTaluka(''); setVillage(''); setSurveyNumber(''); setStatusFilter('all'); setApprovalStatus('all'); setSortBy('newest'); setPage(1); }} />
+        <LayoutsEmptyState hasFilters onClearFilters={() => { setSearch(''); setLocation(''); setState('Maharashtra'); setDistrict(''); setTaluka(''); setVillage(''); setSurveyNumber(''); setStatusFilter('all'); setApprovalStatus('all'); setSortBy('newest'); setPage(1); }} />
       ) : (
         <>
           <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">

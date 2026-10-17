@@ -16,6 +16,7 @@ import {
   PriceRangeFilter,
 } from '@/lib/layoutFilters';
 import { getLocationOptions } from '@/lib/localizedText';
+import { PUBLIC_LOCATION_STATE } from '@/lib/publicLocationDirectory';
 
 function parsePriceRange(value: string | null): PriceRangeFilter {
   const valid: PriceRangeFilter[] = ['all', 'under-5l', '5l-10l', '10l-25l', 'above-25l'];
@@ -32,7 +33,7 @@ export default function LayoutsPageContent() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
-  const [state, setState] = useState('');
+  const [state, setState] = useState(PUBLIC_LOCATION_STATE);
   const [district, setDistrict] = useState('');
   const [taluka, setTaluka] = useState('');
   const [village, setVillage] = useState('');
@@ -44,10 +45,12 @@ export default function LayoutsPageContent() {
   useEffect(() => {
     setSearch(searchParams.get('search') ?? '');
     setLocation(searchParams.get('location') ?? '');
-    setState(searchParams.get('state') ?? '');
-    setDistrict(searchParams.get('district') ?? '');
-    setTaluka(searchParams.get('taluka') ?? '');
-    setVillage(searchParams.get('village') ?? '');
+    setState(PUBLIC_LOCATION_STATE);
+    const requestedDistrict = searchParams.get('district') ?? '';
+    const allowedDistrict = requestedDistrict;
+    setDistrict(allowedDistrict);
+    setTaluka(allowedDistrict ? (searchParams.get('taluka') ?? '') : '');
+    setVillage(allowedDistrict ? (searchParams.get('village') ?? '') : '');
     setSurveyNumber(searchParams.get('surveyNumber') ?? '');
     setPriceRange(parsePriceRange(searchParams.get('price')));
     setSortBy(parseSortOption(searchParams.get('sort')));
@@ -85,7 +88,7 @@ export default function LayoutsPageContent() {
   const clearFilters = () => {
     setSearch('');
     setLocation('');
-    setState(''); setDistrict(''); setTaluka(''); setVillage(''); setSurveyNumber('');
+    setState(PUBLIC_LOCATION_STATE); setDistrict(''); setTaluka(''); setVillage(''); setSurveyNumber('');
     setPriceRange('all');
     setStatusFilter('active');
     setSortBy('newest');
@@ -169,6 +172,7 @@ export default function LayoutsPageContent() {
             onVillageChange={setVillage} onSurveyNumberChange={setSurveyNumber}
             layouts={layouts}
             showStatusFilter
+            publicLocationOnly
           />
         </div>
 

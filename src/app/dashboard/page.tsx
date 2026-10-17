@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import StartupDashboardView from '@/components/dashboard/StartupDashboardView';
 import { useAuth } from '@/context/AuthContext';
+import { useLocale } from '@/context/LocaleContext';
 
 export default function DashboardPage() {
   const { user, isSuperAdmin } = useAuth();
+  const { t } = useLocale();
 
   // Partners have access to their assigned layouts only.
   if (user?.role === 'partner' && !isSuperAdmin) {
@@ -26,10 +28,10 @@ export default function DashboardPage() {
     return (
       <div className="dashboard-page min-w-0">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary-600">Enquiry Admin</p>
-          <h2 className="mt-2 text-2xl font-bold text-gray-900">Dashboard</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">Manage customer enquiries, update their status, and respond to customers through WhatsApp. Layout and property management is reserved for Super Admin.</p>
-          <Link href="/dashboard/inquiries" className="btn-primary mt-6 inline-flex">Open Enquiries</Link>
+          <p className="text-sm font-semibold uppercase tracking-wide text-primary-600">{t('dashboard.dashboard.badge')}</p>
+          <h2 className="mt-2 text-2xl font-bold text-gray-900">{t('dashboard.dashboard.title')}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">{t('dashboard.dashboard.description')}</p>
+          <Link href="/dashboard/inquiries" className="btn-primary mt-6 inline-flex">{t('dashboard.dashboard.openEnquiries')}</Link>
         </div>
       </div>
     );

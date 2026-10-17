@@ -1,10 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { INDIA_STATES, getDependentLocationOptions, LayoutSortOption, PriceRangeFilter } from '@/lib/layoutFilters';
+import { fetchPublicLocationOptions, PUBLIC_LOCATION_STATE } from '@/lib/publicLocationDirectory';
 import { LayoutStatusFilter } from '@/hooks/useLayouts';
 import { useLocale } from '@/context/LocaleContext';
-import { LocationOption } from '@/lib/localizedText';
+import { LocationOption, getLocalizedLocation } from '@/lib/localizedText';
 import { Layout } from '@/lib/types';
 
 interface LayoutFiltersBarProps {
@@ -32,6 +34,8 @@ interface LayoutFiltersBarProps {
   onVillageChange?: (value: string) => void;
   surveyNumber?: string;
   onSurveyNumberChange?: (value: string) => void;
+  /** Enables the Maharashtra-only administrative directory for public search surfaces. */
+  publicLocationOnly?: boolean;
 }
 
 // Staggered Entrance Animations
@@ -84,8 +88,62 @@ export default function LayoutFiltersBar({
   onVillageChange,
   surveyNumber = '',
   onSurveyNumberChange,
+  publicLocationOnly = false,
 }: LayoutFiltersBarProps) {
   const { t, locale } = useLocale();
+  const [publicDistricts, setPublicDistricts] = useState<string[]>([]);
+  const [publicTalukas, setPublicTalukas] = useState<string[]>([]);
+  const [publicVillages, setPublicVillages] = useState<string[]>([]);
+  const [publicLocationError, setPublicLocationError] = useState('');
+  const locationFiltersEnabled = publicLocationOnly || state === PUBLIC_LOCATION_STATE;
+
+  useEffect(() => {
+    if (!locationFiltersEnabled) { setPublicDistricts([]); return; }
+    const controller = new AbortController();
+    setPublicDistricts([]);
+    setPublicLocationError('');
+    fetchPublicLocationOptions('district', [{ field: 'state', value: PUBLIC_LOCATION_STATE }], controller.signal)
+      .then(setPublicDistricts)
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setPublicDistricts(['Dhule', 'Jalgaon', 'Nandurbar']);
+          setPublicLocationError(error instanceof Error ? error.message : 'Could not load districts.');
+        }
+      });
+    return () => controller.abort();
+  }, [locationFiltersEnabled]);
+
+  useEffect(() => {
+    if (!locationFiltersEnabled || !district) {
+      setPublicTalukas([]);
+      return;
+    }
+    const controller = new AbortController();
+    setPublicTalukas([]);
+    setPublicLocationError('');
+    fetchPublicLocationOptions('subdistrict', [
+      { field: 'state', value: PUBLIC_LOCATION_STATE },
+      { field: 'district', value: district },
+    ], controller.signal).then(setPublicTalukas).catch((error: unknown) => {
+      if (!controller.signal.aborted) setPublicLocationError(error instanceof Error ? error.message : 'Could not load talukas.');
+    });
+    return () => controller.abort();
+  }, [locationFiltersEnabled, district]);
+
+  useEffect(() => {
+    if (!locationFiltersEnabled || !district || !taluka) { setPublicVillages([]); return; }
+    const controller = new AbortController();
+    setPublicVillages([]);
+    setPublicLocationError('');
+    fetchPublicLocationOptions('name', [
+      { field: 'state', value: PUBLIC_LOCATION_STATE },
+      { field: 'district', value: district },
+      { field: 'subdistrict', value: taluka },
+    ], controller.signal).then(setPublicVillages).catch((error: unknown) => {
+      if (!controller.signal.aborted) setPublicLocationError(error instanceof Error ? error.message : 'Could not load villages.');
+    });
+    return () => controller.abort();
+  }, [locationFiltersEnabled, district, taluka]);
 
   return (
     <motion.div
@@ -121,31 +179,30 @@ export default function LayoutFiltersBar({
         {onStateChange && onDistrictChange && onTalukaChange && onVillageChange && (
           <>
             <motion.div variants={itemVariants} className="group/field min-w-0">
-              <label htmlFor={`${idPrefix}-state`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">State / UT</label>
-              <select id={`${idPrefix}-state`} value={state} onChange={(e) => { onStateChange(e.target.value); onDistrictChange(''); onTalukaChange(''); onVillageChange(''); }} className="input-field cursor-pointer">
-                <option value="">All States / UTs</option>
-                {INDIA_STATES.map((item) => <option key={item} value={item}>{item}</option>)}
+              <label htmlFor={`${idPrefix}-state`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">{t('filters.state')}</label>
+              <select id={`${idPrefix}-state`} value={(publicLocationOnly || state === PUBLIC_LOCATION_STATE) ? PUBLIC_LOCATION_STATE : state} onChange={(e) => { onStateChange((publicLocationOnly || state === PUBLIC_LOCATION_STATE) ? PUBLIC_LOCATION_STATE : e.target.value); onDistrictChange(''); onTalukaChange(''); onVillageChange(''); }} className="input-field cursor-pointer">
+                {(publicLocationOnly || state === PUBLIC_LOCATION_STATE) ? <option value={PUBLIC_LOCATION_STATE}>{getLocalizedLocation(PUBLIC_LOCATION_STATE, locale)}</option> : <><option value="">All States / UTs</option>{INDIA_STATES.map((item) => <option key={item} value={item}>{getLocalizedLocation(item, locale)}</option>)}</>}
               </select>
             </motion.div>
             <motion.div variants={itemVariants} className="group/field min-w-0">
-              <label htmlFor={`${idPrefix}-district`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">District</label>
+              <label htmlFor={`${idPrefix}-district`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">{t('filters.district')}</label>
               <select id={`${idPrefix}-district`} value={district} disabled={!state} onChange={(e) => { onDistrictChange(e.target.value); onTalukaChange(''); onVillageChange(''); }} className="input-field cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-100">
-                <option value="">All Districts</option>
-                {getDependentLocationOptions(layouts, 'district', { state }).map((item) => <option key={item} value={item}>{item}</option>)}
+                <option value="">{t('filters.allDistricts')}</option>
+                {(locationFiltersEnabled ? publicDistricts : getDependentLocationOptions(layouts, 'district', { state })).map((item) => <option key={item} value={item}>{getLocalizedLocation(item, locale)}</option>)}
               </select>
             </motion.div>
             <motion.div variants={itemVariants} className="group/field min-w-0">
-              <label htmlFor={`${idPrefix}-taluka`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">Taluka / Tehsil</label>
+              <label htmlFor={`${idPrefix}-taluka`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">{t('filters.taluka')}</label>
               <select id={`${idPrefix}-taluka`} value={taluka} disabled={!district} onChange={(e) => { onTalukaChange(e.target.value); onVillageChange(''); }} className="input-field cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-100">
-                <option value="">All Talukas</option>
-                {getDependentLocationOptions(layouts, 'taluka', { state, district }).map((item) => <option key={item} value={item}>{item}</option>)}
+                <option value="">{t('filters.selectTaluka')}</option>
+                {(locationFiltersEnabled ? publicTalukas : getDependentLocationOptions(layouts, 'taluka', { state, district })).map((item) => <option key={item} value={item}>{getLocalizedLocation(item, locale)}</option>)}
               </select>
             </motion.div>
             <motion.div variants={itemVariants} className="group/field min-w-0">
-              <label htmlFor={`${idPrefix}-village`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">Village</label>
+              <label htmlFor={`${idPrefix}-village`} className="mb-1.5 block text-xs font-semibold text-gray-700 sm:text-sm">{t('filters.village')}</label>
               <select id={`${idPrefix}-village`} value={village} disabled={!district} onChange={(e) => onVillageChange(e.target.value)} className="input-field cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-100">
-                <option value="">All Villages</option>
-                {getDependentLocationOptions(layouts, 'village', { state, district, taluka }).map((item) => <option key={item} value={item}>{item}</option>)}
+                <option value="">{t('filters.selectVillage')}</option>
+                {(locationFiltersEnabled ? publicVillages : getDependentLocationOptions(layouts, 'village', { state, district, taluka })).map((item) => <option key={item} value={item}>{getLocalizedLocation(item, locale)}</option>)}
               </select>
             </motion.div>
           </>
@@ -185,6 +242,7 @@ export default function LayoutFiltersBar({
           </motion.div>
         )}
       </div>
+      {publicLocationOnly && publicLocationError && <p role="status" className="mt-2 text-xs text-red-600">{publicLocationError}</p>}
     </motion.div>
   );
 }

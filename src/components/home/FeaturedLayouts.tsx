@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -14,20 +13,18 @@ import {
 } from '@/lib/layoutFilters';
 import { useLocale } from '@/context/LocaleContext';
 import { getLocationOptions } from '@/lib/localizedText';
+import { PUBLIC_LOCATION_STATE } from '@/lib/publicLocationDirectory';
 
 export default function FeaturedLayouts() {
   const { t, locale } = useLocale();
   const { data: layouts = [], error, isLoading, mutate } = useLayouts('active');
-
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
-  const [state, setState] = useState('');
+  const [state, setState] = useState(PUBLIC_LOCATION_STATE);
   const [district, setDistrict] = useState('');
   const [taluka, setTaluka] = useState('');
   const [village, setVillage] = useState('');
   const [surveyNumber, setSurveyNumber] = useState('');
-
-  // Keep filter values in state so LayoutFiltersBar can update them.
   const [priceRange, setPriceRange] = useState<PriceRangeFilter>('all');
   const [sortBy, setSortBy] = useState<LayoutSortOption>('newest');
 
@@ -36,62 +33,41 @@ export default function FeaturedLayouts() {
     [layouts, locale]
   );
 
-  const filterOptions = {
+  const filteredLayouts = useMemo(
+    () =>
+      filterAndSortLayouts(layouts, {
+        search,
+        location,
+        priceRange,
+        sortBy,
+        statusFilter: 'active', state, district, taluka, village, surveyNumber,
+      }),
+    [layouts, search, location, priceRange, sortBy, state, district, taluka, village, surveyNumber]
+  );
+
+  const hasFilters = hasActiveLayoutFilters({
     search,
     location,
     priceRange,
     sortBy,
-    statusFilter: 'active' as const,
-    state,
-    district,
-    taluka,
-    village,
-    surveyNumber,
-  };
+    statusFilter: 'active', state, district, taluka, village, surveyNumber,
+  });
 
-  const filteredLayouts = useMemo(
-    () => filterAndSortLayouts(layouts, filterOptions),
-    [
-      layouts,
-      search,
-      location,
-      priceRange,
-      sortBy,
-      state,
-      district,
-      taluka,
-      village,
-      surveyNumber,
-    ]
-  );
-
-  const hasFilters = hasActiveLayoutFilters(filterOptions);
-
-  const displayedLayouts = hasFilters
-    ? filteredLayouts
-    : filteredLayouts.slice(0, 3);
+  const displayedLayouts = hasFilters ? filteredLayouts : filteredLayouts.slice(0, 3);
 
   const clearFilters = () => {
     setSearch('');
     setLocation('');
-    setState('');
-    setDistrict('');
-    setTaluka('');
-    setVillage('');
-    setSurveyNumber('');
     setPriceRange('all');
     setSortBy('newest');
+    setState(PUBLIC_LOCATION_STATE); setDistrict(''); setTaluka(''); setVillage(''); setSurveyNumber('');
   };
 
   return (
     <section className="mx-auto w-full min-w-0 max-w-7xl overflow-x-hidden px-4 py-16 sm:px-6 lg:px-8">
       <div className="text-center">
-        <h2 className="text-2xl font-bold sm:text-3xl">
-          {t('home.featured.title')}
-        </h2>
-        <p className="mt-2 text-gray-500">
-          {t('home.featured.subtitle')}
-        </p>
+        <h2 className="text-2xl font-bold sm:text-3xl">{t('home.featured.title')}</h2>
+        <p className="mt-2 text-gray-500">{t('home.featured.subtitle')}</p>
       </div>
 
       <div className="mt-8 min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50/80 p-3 sm:p-5">
@@ -107,37 +83,20 @@ export default function FeaturedLayouts() {
           onSortByChange={setSortBy}
           locationOptions={locationOptions}
           layouts={layouts}
-          state={state}
-          district={district}
-          taluka={taluka}
-          village={village}
-          surveyNumber={surveyNumber}
-          onStateChange={(value) => {
-            setState(value);
-            setDistrict('');
-            setTaluka('');
-            setVillage('');
-          }}
-          onDistrictChange={(value) => {
-            setDistrict(value);
-            setTaluka('');
-            setVillage('');
-          }}
-          onTalukaChange={(value) => {
-            setTaluka(value);
-            setVillage('');
-          }}
+          state={state} district={district} taluka={taluka} village={village} surveyNumber={surveyNumber}
+          onStateChange={(v) => { setState(v); setDistrict(''); setTaluka(''); setVillage(''); }}
+          onDistrictChange={(v) => { setDistrict(v); setTaluka(''); setVillage(''); }}
+          onTalukaChange={(v) => { setTaluka(v); setVillage(''); }}
           onVillageChange={setVillage}
           onSurveyNumberChange={setSurveyNumber}
+          publicLocationOnly
         />
 
         {hasFilters && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-gray-600">
-              {t('layouts.showing')} {filteredLayouts.length}{' '}
-              {t('layouts.layouts')}
+              {t('layouts.showing')} {filteredLayouts.length} {t('layouts.layouts')}
             </p>
-
             <button
               type="button"
               onClick={clearFilters}
@@ -155,20 +114,12 @@ export default function FeaturedLayouts() {
         ))}
       </div>
 
-      {isLoading && (
-        <p className="mt-8 text-center text-gray-400">
-          {t('home.featured.loading')}
-        </p>
-      )}
+      {isLoading && <p className="mt-8 text-center text-gray-400">{t('home.featured.loading')}</p>}
 
       {error && (
         <div className="mt-8 text-center">
           <p className="text-red-500">{t('home.featured.error')}</p>
-          <button
-            type="button"
-            onClick={() => mutate()}
-            className="btn-primary mt-4"
-          >
+          <button type="button" onClick={() => mutate()} className="btn-primary mt-4">
             {t('layouts.retry')}
           </button>
         </div>
@@ -179,13 +130,8 @@ export default function FeaturedLayouts() {
           <p className="text-gray-400">
             {hasFilters ? t('layouts.noMatch') : t('layouts.none')}
           </p>
-
           {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="btn-secondary mt-4"
-            >
+            <button type="button" onClick={clearFilters} className="btn-secondary mt-4">
               {t('layouts.clearFilters')}
             </button>
           )}

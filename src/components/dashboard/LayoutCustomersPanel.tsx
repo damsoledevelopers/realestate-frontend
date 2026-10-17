@@ -53,7 +53,7 @@ export default function LayoutCustomersPanel({
             <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm">
               Open Google Maps
             </a>
-            <ShareLocationButton latitude={latitude!} longitude={longitude!} title={layoutName} />
+            <ShareLocationButton latitude={latitude!} longitude={longitude!} title={layoutName} assetId={layoutId} assetType="layout" />
           </div>
         </div>
       )}
