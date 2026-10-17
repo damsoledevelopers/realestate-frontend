@@ -7,8 +7,9 @@ import { notify } from '@/lib/notify';
 import { getLayoutImages, MAX_LAYOUT_IMAGES } from '@/lib/layoutImages';
 import { resolveMediaUrls } from '@/lib/media';
 import { useLocale } from '@/context/LocaleContext';
+import { getLocalizedLocation } from '@/lib/localizedText';
 import { useLayouts } from '@/hooks/useLayouts';
-import { INDIA_STATES, getDependentLocationOptions } from '@/lib/layoutFilters';
+import { getDependentLocationOptions } from '@/lib/layoutFilters';
 
 export const emptyLayoutForm = {
   name: '',
@@ -24,6 +25,7 @@ export const emptyLayoutForm = {
 
 // Public ArcGIS administrative village directory. It exposes state, district,
 // subdistrict (taluka/tehsil) and village names, queried one level at a time.
+const ADD_LAYOUT_DISTRICTS = ['Dhule', 'Jalgaon', 'Nandurbar'] as const;
 const INDIA_LOCATION_QUERY_URL =
   'https://livingatlas.esri.in/server/rest/services/IAB2024/Village_Demographics_2024/MapServer/0/query';
 
@@ -95,7 +97,7 @@ export default function LayoutFormModal({
   onClose,
   onSaved,
 }: LayoutFormModalProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { data: locationLayouts = [] } = useLayouts('all');
   const [layoutForm, setLayoutForm] = useState(emptyLayoutForm);
   const [districtMaster, setDistrictMaster] = useState<string[]>([]);
@@ -154,9 +156,9 @@ export default function LayoutFormModal({
     return () => controller.abort();
   }, [layoutForm.state, layoutForm.district, layoutForm.taluka]);
 
-  const savedDistricts = getDependentLocationOptions(locationLayouts, 'district', { state: layoutForm.state });
-  const districts = Array.from(new Set([...districtMaster, ...savedDistricts, ...(layoutForm.district ? [layoutForm.district] : [])]))
-    .sort((a, b) => a.localeCompare(b));
+  const districts = layoutForm.state === 'Maharashtra'
+    ? [...ADD_LAYOUT_DISTRICTS]
+    : [];
   const savedTalukas = getDependentLocationOptions(locationLayouts, 'taluka', { state: layoutForm.state, district: layoutForm.district });
   const talukas = Array.from(new Set([...talukaMaster, ...savedTalukas, ...(layoutForm.taluka ? [layoutForm.taluka] : [])]))
     .sort((a, b) => a.localeCompare(b));
@@ -219,7 +221,7 @@ export default function LayoutFormModal({
       setAttachments((initialLayout.attachments || []).map((item) => ({ ...item, visible: item.visible !== false })));
       setDocuments((initialLayout.documents || []).map((item) => ({ ...item, visible: item.visible !== false })));  
     } else {
-      setLayoutForm(emptyLayoutForm);
+      setLayoutForm({ ...emptyLayoutForm, state: 'Maharashtra' });
       setExistingImages([]);
       setHiddenImages([]);
       setAmenities([]);
@@ -355,27 +357,27 @@ export default function LayoutFormModal({
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">State / UT</label>
-              <select className="input-field" value={layoutForm.state} onChange={(e) => setLayoutForm({ ...layoutForm, state: e.target.value, district: '', taluka: '', village: '' })}>
-                <option value="">Select state / UT</option>{INDIA_STATES.map((item) => <option key={item} value={item}>{item}</option>)}
+              <label className="mb-1 block text-xs font-medium text-gray-700">{t('filters.state')}</label>
+              <select className="input-field" value={layoutForm.state || 'Maharashtra'} onChange={(e) => setLayoutForm({ ...layoutForm, state: e.target.value, district: '', taluka: '', village: '' })}>
+                <option value="Maharashtra">{getLocalizedLocation("Maharashtra", locale)}</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">District</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">{t('filters.district')}</label>
               <select className="input-field" value={layoutForm.district} disabled={!layoutForm.state} onChange={(e) => setLayoutForm({ ...layoutForm, district: e.target.value, taluka: '', village: '' })}>
-                <option value="">Select district</option>{districts.map((item) => <option key={item} value={item}>{item}</option>)}
+                <option value="">{t('filters.selectDistrict')}</option>{districts.map((item) => <option key={item} value={item}>{getLocalizedLocation(item, locale)}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Taluka / Tehsil</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">{t('filters.taluka')}</label>
               <select className="input-field" value={layoutForm.taluka} disabled={!layoutForm.district} onChange={(e) => setLayoutForm({ ...layoutForm, taluka: e.target.value, village: '' })}>
-                <option value="">Select taluka / tehsil</option>{talukas.map((item) => <option key={item} value={item}>{item}</option>)}
+                <option value="">{t('filters.selectTaluka')}</option>{talukas.map((item) => <option key={item} value={item}>{getLocalizedLocation(item, locale)}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Village</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">{t('filters.village')}</label>
               <select className="input-field" value={layoutForm.village} disabled={!layoutForm.taluka} onChange={(e) => setLayoutForm({ ...layoutForm, village: e.target.value })}>
-                <option value="">Select village</option>{villages.map((item) => <option key={item} value={item}>{item}</option>)}
+                <option value="">{t('filters.selectVillage')}</option>{villages.map((item) => <option key={item} value={item}>{getLocalizedLocation(item, locale)}</option>)}
               </select>
             </div>
             <div>

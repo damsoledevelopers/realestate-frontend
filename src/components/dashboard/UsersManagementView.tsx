@@ -13,6 +13,7 @@ import { useLocale } from '@/context/LocaleContext';
 import { getLayoutDisplayName } from '@/lib/localizedText';
 import UserFormModal, { UserFormValues } from '@/components/dashboard/UserFormModal';
 import UserLayoutsPanel from '@/components/dashboard/UserLayoutsPanel';
+import UserAssetAssignmentsPanel from '@/components/dashboard/UserAssetAssignmentsPanel';
 
 const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
 
@@ -82,7 +83,7 @@ export default function UsersManagementView() {
 
 const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
 
-  const updateRole = async (user: User, role: 'super_admin' | 'user' | 'customer' | 'admin') => {
+  const updateRole = async (user: User, role: 'super_admin' | 'user' | 'partner' | 'customer' | 'admin') => {
     if (!token || user.role === role) return;
     const isElevation = role === 'super_admin' && user.role !== 'super_admin';
     if (
@@ -242,8 +243,22 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
           },
           token
         );
+        let assignmentSaveFailed = false;
+        if (values.assignments?.length) {
+          try {
+            await api.put(`/users/${created._id}/assignments`, { assignments: values.assignments }, token);
+          } catch (assignmentError) {
+            assignmentSaveFailed = true;
+            // The user creation succeeded; assignments can be retried from user details.
+            notify.error((assignmentError as { message?: string }).message || 'User created, but asset assignments could not be saved. Open the user details to retry.');
+          }
+        }
         setUsers((prev) => [created, ...prev]);
-        notify.success(t('dashboard.users.createSuccess'));
+        if (!assignmentSaveFailed) {
+          notify.success(values.assignments?.length
+            ? `${t('dashboard.users.createSuccess')} Assets assigned: ${values.assignments.length}.`
+            : t('dashboard.users.createSuccess'));
+        }
         setFormOpen(false);
         fetchUsers();
       } else if (selectedUser) {
@@ -331,12 +346,13 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
                         value={user.role}
                         disabled={isSelf(user._id) || actionLoading === user._id}
                         onChange={(e) =>
-                          updateRole(user, e.target.value as 'super_admin' | 'user' | 'customer' | 'admin')
+                          updateRole(user, e.target.value as 'super_admin' | 'user' | 'partner' | 'customer' | 'admin')
                         }
                         className="rounded-lg border border-gray-200 px-2 py-1 text-xs capitalize"
                       >
                         <option value="customer">{t('dashboard.users.role.customer')}</option>
                         <option value="user">{t('dashboard.users.role.user')}</option>
+                        <option value="partner">Partner</option>
                         <option value="admin">Admin</option>
                         <option value="super_admin">{t('dashboard.users.role.superAdmin')}</option>
                       </select>
@@ -443,6 +459,11 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
                     </dd>
                   </div>
                 </dl>
+
+                <div className="mt-6">
+                  <h4 className="font-semibold">Asset assignments</h4>
+                  <div className="mt-3"><UserAssetAssignmentsPanel userId={selectedUser.user._id} /></div>
+                </div>
 
                 <div className="mt-6">
                   <h4 className="font-semibold">{t('dashboard.users.layoutAccess')}</h4>

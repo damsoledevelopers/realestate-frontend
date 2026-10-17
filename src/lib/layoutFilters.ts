@@ -1,3 +1,4 @@
+
 import { Layout } from '@/lib/types';
 import { LayoutStatusFilter } from '@/hooks/useLayouts';
 
@@ -50,45 +51,8 @@ export const SORT_OPTIONS: {
   { value: 'plots', label: 'Most plots' },
 ];
 
-/** India states and union territories. */
-export const INDIA_STATES = [
-  'Andhra Pradesh',
-  'Arunachal Pradesh',
-  'Assam',
-  'Bihar',
-  'Chhattisgarh',
-  'Goa',
-  'Gujarat',
-  'Haryana',
-  'Himachal Pradesh',
-  'Jharkhand',
-  'Karnataka',
-  'Kerala',
-  'Madhya Pradesh',
-  'Maharashtra',
-  'Manipur',
-  'Meghalaya',
-  'Mizoram',
-  'Nagaland',
-  'Odisha',
-  'Punjab',
-  'Rajasthan',
-  'Sikkim',
-  'Tamil Nadu',
-  'Telangana',
-  'Tripura',
-  'Uttar Pradesh',
-  'Uttarakhand',
-  'West Bengal',
-  'Andaman and Nicobar Islands',
-  'Chandigarh',
-  'Dadra and Nagar Haveli and Daman and Diu',
-  'Delhi',
-  'Jammu and Kashmir',
-  'Ladakh',
-  'Lakshadweep',
-  'Puducherry',
-].sort((a, b) => a.localeCompare(b));
+/** Only Maharashtra is supported for location filtering. */
+export const INDIA_STATES = ['Maharashtra'];
 
 export interface LayoutLocationParts {
   state: string;
@@ -104,7 +68,7 @@ const includesCI = (a: string, b: string): boolean =>
   a.localeCompare(b, undefined, { sensitivity: 'base' }) === 0;
 
 export function getLayoutLocationParts(
-  layout: Layout
+  layout: Layout,
 ): LayoutLocationParts {
   const record = layout as Layout & Record<string, unknown>;
   const location = normalize(layout.location);
@@ -117,7 +81,7 @@ export function getLayoutLocationParts(
   const state =
     normalize(record.state) ||
     parts.find((part) =>
-      INDIA_STATES.some((item) => includesCI(item, part))
+      INDIA_STATES.some((item) => includesCI(item, part)),
     ) ||
     '';
 
@@ -125,7 +89,6 @@ export function getLayoutLocationParts(
     ? parts.findIndex((part) => includesCI(part, state))
     : -1;
 
-  // Legacy address fallback: token immediately before state.
   const district =
     normalize(record.district) ||
     (stateIndex > 0 ? parts[stateIndex - 1] : '');
@@ -138,8 +101,8 @@ export function getLayoutLocationParts(
     normalize(record.village) ||
     (districtIndex > 0
       ? parts[districtIndex - 1].replace(
-          /^(village|gaon|gat\s*no\.?|survey\s*no\.?)\s*/i,
-          ''
+          /^(village|gaon|gat no\.?|survey no\.?)\s*/i,
+          '',
         )
       : '');
 
@@ -154,14 +117,17 @@ export function getLayoutLocationParts(
 export function getDependentLocationOptions(
   layouts: Layout[],
   level: keyof LayoutLocationParts,
-  filters: Partial<LayoutLocationParts> = {}
+  filters: Partial<LayoutLocationParts> = {},
 ): string[] {
   const values = new Set<string>();
 
   for (const layout of layouts) {
     const parts = getLayoutLocationParts(layout);
 
-    if (filters.state && !includesCI(parts.state, filters.state)) {
+    if (
+      filters.state &&
+      !includesCI(parts.state, filters.state)
+    ) {
       continue;
     }
 
@@ -187,13 +153,13 @@ export function getDependentLocationOptions(
   }
 
   return Array.from(values).sort((a, b) =>
-    a.localeCompare(b)
+    a.localeCompare(b),
   );
 }
 
 function matchesPriceRange(
   price: number | null | undefined,
-  range: PriceRangeFilter
+  range: PriceRangeFilter,
 ): boolean {
   if (range === 'all') return true;
   if (price == null) return false;
@@ -228,7 +194,7 @@ export function getUniqueLocations(layouts: Layout[]): string[] {
   }
 
   return Array.from(locations).sort((a, b) =>
-    a.localeCompare(b)
+    a.localeCompare(b),
   );
 }
 
@@ -245,24 +211,21 @@ export function filterAndSortLayouts(
     taluka = '',
     village = '',
     surveyNumber = '',
-  }: LayoutFilterParams
+  }: LayoutFilterParams,
 ): Layout[] {
   const query = search.trim().toLowerCase();
   const locationQuery = location.trim().toLowerCase();
   const surveyQuery = surveyNumber.trim().toLowerCase();
 
   let result = layouts.filter((layout) => {
-    if (
-      statusFilter === 'active' &&
-      layout.status !== 'active'
-    ) {
+    if (statusFilter === 'active' && layout.status !== 'active') {
       return false;
     }
 
     if (
       !matchesPriceRange(
         layout.startingPrice ?? layout.price,
-        priceRange
+        priceRange,
       )
     ) {
       return false;
@@ -276,18 +239,95 @@ export function filterAndSortLayouts(
     }
 
     const parts = getLayoutLocationParts(layout);
-
-    if (state && !includesCI(parts.state, state)) return false;
-    if (district && !includesCI(parts.district, district)) return false;
-    if (taluka && !includesCI(parts.taluka, taluka)) return false;
-    if (village && !includesCI(parts.village, village)) return false;
-
     const layoutRecord = layout as Layout & Record<string, unknown>;
+    const rawLocation = normalize(layout.location);
+
+    const matchLocationPart = (
+      selected: string,
+      structured: unknown,
+      inferred: string,
+    ): boolean => {
+      if (!selected) return true;
+
+      const known = normalize(structured) || inferred;
+
+      if (known) {
+        return includesCI(known, selected);
+      }
+
+      return rawLocation
+        .toLocaleLowerCase()
+        .includes(selected.toLocaleLowerCase());
+    };
+
+    const supportedDistrict = [
+      'Dhule',
+      'Jalgaon',
+      'Nandurbar',
+    ].some((item) =>
+      includesCI(
+        item,
+        normalize(layoutRecord.district) || parts.district,
+      ),
+    );
+
+    if (
+      state &&
+      !matchLocationPart(state, layoutRecord.state, parts.state) &&
+      !(includesCI(state, 'Maharashtra') && supportedDistrict)
+    ) {
+      return false;
+    }
+
+    if (
+      district &&
+      !matchLocationPart(
+        district,
+        layoutRecord.district,
+        parts.district,
+      )
+    ) {
+      return false;
+    }
+
+    if (
+      taluka &&
+      !matchLocationPart(
+        taluka,
+        layoutRecord.taluka,
+        parts.taluka,
+      )
+    ) {
+      return false;
+    }
+
+    if (
+      village &&
+      !matchLocationPart(
+        village,
+        layoutRecord.village,
+        parts.village,
+      )
+    ) {
+      return false;
+    }
+
     const plots = Array.isArray(layout.plots) ? layout.plots : [];
 
     if (surveyQuery) {
-      const layoutSurvey = normalize(layoutRecord.surveyNumber).toLowerCase();
-      const layoutGat = normalize(layoutRecord.gatNumber).toLowerCase();
+      const layoutSurvey = [
+        normalize(layoutRecord.surveyNumber),
+        normalize(layoutRecord.gatNumber),
+        ...(Array.isArray(layout.surveyNumbers)
+          ? layout.surveyNumbers.map(normalize)
+          : []),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      const layoutGat = normalize(
+        layoutRecord.gatNumber,
+      ).toLowerCase();
 
       const plotMatch = plots.some((plot) => {
         const p = plot as unknown as Record<string, unknown>;
@@ -298,7 +338,7 @@ export function filterAndSortLayouts(
           p.gatNumber,
           p.number,
         ].some((value) =>
-          normalize(value).toLowerCase().includes(surveyQuery)
+          normalize(value).toLowerCase().includes(surveyQuery),
         );
       });
 
@@ -323,7 +363,13 @@ export function filterAndSortLayouts(
       parts.district.toLowerCase().includes(query) ||
       parts.taluka.toLowerCase().includes(query) ||
       parts.village.toLowerCase().includes(query) ||
-      normalize(layoutRecord.surveyNumber).toLowerCase().includes(query) ||
+      normalize(layoutRecord.surveyNumber)
+        .toLowerCase()
+        .includes(query) ||
+      (Array.isArray(layout.surveyNumbers) &&
+        layout.surveyNumbers.some((value) =>
+          normalize(value).toLowerCase().includes(query),
+        )) ||
       plots.some((plot) => {
         const p = plot as unknown as Record<string, unknown>;
 
@@ -332,15 +378,13 @@ export function filterAndSortLayouts(
           p.plotNumber,
           p.gatNumber,
         ].some((value) =>
-          normalize(value).toLowerCase().includes(query)
+          normalize(value).toLowerCase().includes(query),
         );
       })
     );
   });
 
-  // Use slice() rather than spread to preserve compatibility
-  // with older TypeScript targets.
-  result = result.slice().sort((a, b) => {
+  result = result.sort((a, b) => {
     if (sortBy === 'price') {
       return (
         (a.startingPrice ?? a.price ?? Number.MAX_SAFE_INTEGER) -
@@ -379,7 +423,7 @@ export function filterAndSortLayouts(
 }
 
 export function hasActiveLayoutFilters(
-  params: LayoutFilterParams
+  params: LayoutFilterParams,
 ): boolean {
   return Boolean(
     params.search.trim() ||
@@ -391,7 +435,7 @@ export function hasActiveLayoutFilters(
       params.surveyNumber?.trim() ||
       (params.priceRange ?? 'all') !== 'all' ||
       (params.statusFilter ?? 'active') !== 'active' ||
-      params.sortBy !== 'newest'
+      params.sortBy !== 'newest',
   );
 }
 
@@ -419,12 +463,29 @@ export function buildLayoutsSearchParams({
 >): string {
   const params = new URLSearchParams();
 
-  if (search.trim()) params.set('search', search.trim());
-  if (location.trim()) params.set('location', location.trim());
-  if (state.trim()) params.set('state', state.trim());
-  if (district.trim()) params.set('district', district.trim());
-  if (taluka.trim()) params.set('taluka', taluka.trim());
-  if (village.trim()) params.set('village', village.trim());
+  if (search.trim()) {
+    params.set('search', search.trim());
+  }
+
+  if (location.trim()) {
+    params.set('location', location.trim());
+  }
+
+  if (state.trim()) {
+    params.set('state', state.trim());
+  }
+
+  if (district.trim()) {
+    params.set('district', district.trim());
+  }
+
+  if (taluka.trim()) {
+    params.set('taluka', taluka.trim());
+  }
+
+  if (village.trim()) {
+    params.set('village', village.trim());
+  }
 
   if (surveyNumber.trim()) {
     params.set('surveyNumber', surveyNumber.trim());
