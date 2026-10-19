@@ -6,6 +6,7 @@ import LayoutPartnerManager from '@/components/dashboard/LayoutPartnerManager';
 import { useLocale } from '@/context/LocaleContext';
 import { getLayoutDisplayName, getLocalizedLocation } from '@/lib/localizedText';
 import { useManagedLayoutList } from '@/hooks/useManagedLayoutList';
+import PartnerAccountRequestPanel from '@/components/dashboard/PartnerAccountRequestPanel';
 
 export default function DashboardPartnersPage() {
   const { locale, t } = useLocale();
@@ -28,6 +29,7 @@ export default function DashboardPartnersPage() {
 
   return (
     <div className="dashboard-page">
+      <PartnerAccountRequestPanel />
       <div className="page-header">
         <div>
           <h2 className="page-header-title">{t('dashboard.partners.title')}</h2>
