@@ -5,23 +5,24 @@ import { motion } from 'framer-motion';
 import AnimatedSection from '@/components/layouts/detail/AnimatedSection';
 import SectionHeading from '@/components/layouts/detail/SectionHeading';
 import { useLocale } from '@/context/LocaleContext';
-import { getLocalizedLocation } from '@/lib/localizedText';
+
+type AmenityIcon = () => JSX.Element;
 
 type AmenityItem = {
   key: string;
   label: string;
-  icon: () => JSX.Element;
+  icon: AmenityIcon;
 };
 
-const AMENITY_KEYS: AmenityItem[] = [
-  { key: 'detail.amenity.security', label: '', icon: SecurityIcon },
-  { key: 'detail.amenity.water', label: '', icon: WaterIcon },
-  { key: 'detail.amenity.lights', label: '', icon: LightsIcon },
-  { key: 'detail.amenity.roads', label: '', icon: RoadsIcon },
-  { key: 'detail.amenity.garden', label: '', icon: GardenIcon },
-  { key: 'detail.amenity.parking', label: '', icon: ParkingIcon },
-  { key: 'detail.amenity.club', label: '', icon: ClubIcon },
-  { key: 'detail.amenity.play', label: '', icon: PlayIcon },
+const AMENITY_KEYS: { key: string; icon: AmenityIcon }[] = [
+  { key: 'detail.amenity.security', icon: SecurityIcon },
+  { key: 'detail.amenity.water', icon: WaterIcon },
+  { key: 'detail.amenity.lights', icon: LightsIcon },
+  { key: 'detail.amenity.roads', icon: RoadsIcon },
+  { key: 'detail.amenity.garden', icon: GardenIcon },
+  { key: 'detail.amenity.parking', icon: ParkingIcon },
+  { key: 'detail.amenity.club', icon: ClubIcon },
+  { key: 'detail.amenity.play', icon: PlayIcon },
 ];
 
 export default function AmenitiesSection({
@@ -38,8 +39,9 @@ export default function AmenitiesSection({
         icon: AMENITY_KEYS[index % AMENITY_KEYS.length].icon,
       }))
     : AMENITY_KEYS.map((item) => ({
-        ...item,
+        key: item.key,
         label: t(item.key),
+        icon: item.icon,
       }));
 
   return (

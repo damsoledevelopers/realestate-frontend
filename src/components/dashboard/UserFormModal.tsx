@@ -7,10 +7,6 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { notify } from '@/lib/notify';
 
-type AssetType = 'layout' | 'farm' | 'plot' | 'land';
-type AssetOption = { id: string; assetType: AssetType; label: string };
-type AssetResponse = { assets: AssetOption[] };
-
 export interface UserFormValues {
   name: string;
   email: string;
@@ -18,7 +14,7 @@ export interface UserFormValues {
   phone: string;
   role: 'super_admin' | 'user' | 'partner' | 'customer' | 'admin';
   isActive: boolean;
-  assignments?: { assetType: AssetType; assetId: string }[];
+  assignments: { assetType: 'layout' | 'plot' | 'farm' | 'land'; assetId: string }[];
 }
 
 interface UserFormModalProps {
@@ -37,6 +33,7 @@ const EMPTY_FORM: UserFormValues = {
   phone: '',
   role: 'user',
   isActive: true,
+  assignments: [],
 };
 
 export default function UserFormModal({
@@ -50,23 +47,13 @@ export default function UserFormModal({
   const { t } = useLocale();
   const { token } = useAuth();
   const [form, setForm] = useState<UserFormValues>(EMPTY_FORM);
-  const [assets, setAssets] = useState<AssetOption[]>([]);
-  const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
+  const [assets, setAssets] = useState<{id:string;assetType:'layout'|'plot'|'farm'|'land';label:string}[]>([]);
   const [assetSearch, setAssetSearch] = useState('');
+  const [assetType, setAssetType] = useState('all');
   const [assetsLoading, setAssetsLoading] = useState(false);
-  const [assetTypeFilter, setAssetTypeFilter] = useState<'all' | AssetType>('all');
 
   useEffect(() => {
     if (!open) return;
-    setSelectedAssets(new Set());
-    setAssetSearch('');
-    if (mode === 'create' && token) {
-      setAssetsLoading(true);
-      api.get<AssetResponse>('/users/assignable-assets', token)
-        .then((data) => setAssets(data.assets || []))
-        .catch((error: { message?: string }) => notify.error(error.message || 'Could not load assets for assignment'))
-        .finally(() => setAssetsLoading(false));
-    }
     if (mode === 'edit' && initialUser) {
       setForm({
         name: initialUser.name,
@@ -77,37 +64,32 @@ export default function UserFormModal({
           ? (initialUser.role as UserFormValues['role'])
           : 'user',
         isActive: initialUser.isActive,
+        assignments: [],
       });
     } else {
       setForm(EMPTY_FORM);
     }
+    if (!token) return;
+    setAssetsLoading(true);
+    Promise.all([
+      api.get<{assets: {id:string;assetType:'layout'|'plot'|'farm'|'land';label:string}[]}>(`/users/assignment-assets`, token),
+      mode === 'edit' && initialUser ? api.get<{assignments:{assetType:'layout'|'plot'|'farm'|'land';assetId:string}[]}>(`/users/${initialUser._id}/assignments`, token) : Promise.resolve({assignments: [] as {assetType:'layout'|'plot'|'farm'|'land';assetId:string}[]}),
+    ]).then(([assetData, assignmentData]) => {
+      setAssets(assetData.assets || []);
+      setForm(prev => ({...prev, assignments: assignmentData.assignments || []}));
+    }).catch((err) => notify.error((err as {message?:string}).message || 'Could not load assignable assets')).finally(() => setAssetsLoading(false));
   }, [open, mode, initialUser, token]);
 
   if (!open) return null;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const assignments = Array.from(selectedAssets).map((key) => {
-      const split = key.indexOf(':');
-      return { assetType: key.slice(0, split) as AssetType, assetId: key.slice(split + 1) };
-    });
-    await onSubmit({ ...form, assignments });
+    await onSubmit(form);
   };
-
-  const toggleAsset = (key: string) => setSelectedAssets((current) => {
-    const next = new Set(current);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    return next;
-  });
-
-  const visibleAssets = assets.filter((asset) =>
-    (assetTypeFilter === 'all' || asset.assetType === assetTypeFilter) &&
-    asset.label.toLocaleLowerCase().includes(assetSearch.trim().toLocaleLowerCase())
-  );
 
   return (
     <div className="modal-overlay">
-      <div className="modal-panel max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <div className="modal-panel w-full max-w-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold">
@@ -212,28 +194,20 @@ export default function UserFormModal({
             </>
           )}
 
-          {mode === 'create' && (
-            <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Assign layouts, farms, plots and lands</h4>
-                <p className="mt-1 text-xs text-gray-500">Select the existing database assets this user should be able to access. You can assign more assets later from the user details panel.</p>
+          <section className="rounded-xl border border-gray-200 p-3 sm:p-4 space-y-3">
+            <div><h4 className="font-semibold text-gray-900">Assign Assets</h4><p className="text-xs text-gray-500 mt-1">Choose current assets to grant this user access. Future assets are not automatically assigned.</p></div>
+            {assetsLoading ? <p className="text-sm text-gray-500">Loading assets…</p> : <>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-2">
+                <input value={assetSearch} onChange={e=>setAssetSearch(e.target.value)} placeholder="Search assets by name or ID" className="input-field w-full" />
+                <select value={assetType} onChange={e=>setAssetType(e.target.value)} className="input-field w-full"><option value="all">All asset types</option><option value="layout">Layouts</option><option value="plot">Plots</option><option value="farm">Farms</option><option value="land">Lands</option></select>
               </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <input className="input-field w-full" value={assetSearch} onChange={(e) => setAssetSearch(e.target.value)} placeholder="Search assets by name, plot, survey or location…" />
-                <select className="input-field w-full" value={assetTypeFilter} onChange={(e) => setAssetTypeFilter(e.target.value as 'all' | AssetType)}>
-                  <option value="all">All asset types</option><option value="layout">Layouts</option><option value="farm">Farms</option><option value="plot">Individual plots</option><option value="land">Lands</option>
-                </select>
-              </div>
-              {assetsLoading ? <p className="text-sm text-gray-500">Loading existing assets…</p> : visibleAssets.length === 0 ? <p className="rounded-lg bg-white p-3 text-sm text-gray-500">No matching assets found in the database.</p> : (
-                <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-gray-200 bg-white p-2">
-                  {visibleAssets.map((asset) => { const key = `${asset.assetType}:${asset.id}`; return <label key={key} className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm hover:bg-emerald-50"><input type="checkbox" className="mt-1" checked={selectedAssets.has(key)} onChange={() => toggleAsset(key)} /><span><span className="font-medium">{asset.label}</span><span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs capitalize text-gray-600">{asset.assetType === 'plot' ? 'Individual plot' : asset.assetType}</span></span></label>; })}
-                </div>
-              )}
-              <p className="text-xs text-gray-600">{selectedAssets.size} asset(s) selected</p>
-            </section>
-          )}
+              <div className="flex flex-wrap gap-2 text-sm"><button type="button" className="btn-secondary" onClick={()=>setForm(prev=>({...prev,assignments:assets.map(a=>({assetType:a.assetType,assetId:a.id}))}))}>All current assets</button><button type="button" className="btn-secondary" onClick={()=>setForm(prev=>({...prev,assignments:prev.assignments.filter(a=>!assets.some(x=>x.id===a.assetId&&x.assetType===a.assetType))}))}>Deselect visible</button><button type="button" className="btn-secondary" onClick={()=>setForm(prev=>({...prev,assignments:[]}))}>Clear selection</button></div>
+              <div className="max-h-44 overflow-y-auto rounded-lg border border-gray-100 divide-y">{assets.filter(a=>(assetType==='all'||a.assetType===assetType)&&`${a.label} ${a.id}`.toLowerCase().includes(assetSearch.toLowerCase())).map(a=>{const checked=form.assignments.some(x=>x.assetType===a.assetType&&x.assetId===a.id);return <label key={`${a.assetType}:${a.id}`} className="flex items-start gap-2 p-2.5 text-sm hover:bg-gray-50 cursor-pointer"><input type="checkbox" className="mt-1" checked={checked} onChange={()=>setForm(prev=>({...prev,assignments:checked?prev.assignments.filter(x=>!(x.assetType===a.assetType&&x.assetId===a.id)):[...prev.assignments,{assetType:a.assetType,assetId:a.id}]}))}/><span className="min-w-0"><span className="block font-medium text-gray-800">{a.label}</span><span className="block text-xs text-gray-500 break-all">{a.assetType} · {a.id}</span></span></label>})}{assets.length===0&&<p className="p-3 text-sm text-gray-500">No assignable assets found.</p>}</div>
+              <p className="text-xs text-gray-500">{form.assignments.length} asset(s) selected</p>
+            </>}
+          </section>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary" disabled={saving}>
               {t('common.cancel')}
             </button>

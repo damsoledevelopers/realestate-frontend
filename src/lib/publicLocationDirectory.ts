@@ -3,31 +3,19 @@ import { getApiBaseUrl } from '@/lib/apiBase';
 
 export const PUBLIC_LOCATION_STATE = 'Maharashtra';
 
-/** Initial public-search rollout districts. */
+/** Initial public-search rollout. Options are returned only when present in eligible database layouts. */
 export const PUBLIC_LOCATION_DISTRICTS: readonly string[] = [
   'Dhule',
   'Jalgaon',
   'Nandurbar',
 ];
 
-// Administrative directory used to populate choices even before a layout
-// exists in that location. Layout search results still come from MongoDB.
+// Administrative directory used to populate choices even before a layout exists
+// in that location. Layout search results themselves always come from MongoDB.
 const INDIA_LOCATION_QUERY_URL =
   'https://livingatlas.esri.in/server/rest/services/IAB2024/Village_Demographics_2024/MapServer/0/query';
 
 type DirectoryField = 'district' | 'subdistrict' | 'name';
-
-type DirectoryFilter = {
-  field: 'state' | 'district' | 'taluka';
-  value: string;
-};
-
-type LocationFilter = {
-  field: FilterField;
-  value: string;
-};
-
-type FilterField = 'state' | 'district' | 'subdistrict' | 'taluka';
 
 function escapeSqlValue(value: string): string {
   return value.replace(/'/g, "''");
@@ -35,8 +23,11 @@ function escapeSqlValue(value: string): string {
 
 async function fetchAdministrativeOptions(
   level: 'district' | 'taluka' | 'village',
-  filters: DirectoryFilter[],
-  signal?: AbortSignal,
+  filters: Array<{
+    field: 'state' | 'district' | 'taluka';
+    value: string;
+  }>,
+  signal?: AbortSignal
 ): Promise<string[]> {
   const field: DirectoryField =
     level === 'taluka'
@@ -46,10 +37,10 @@ async function fetchAdministrativeOptions(
         : 'district';
 
   const where = filters
-    .map(({ field, value }) => {
-      const queryField = field === 'taluka' ? 'subdistrict' : field;
-      return `${queryField} = '${escapeSqlValue(value)}'`;
-    })
+    .map(
+      ({ field, value }) =>
+        `${field === 'taluka' ? 'subdistrict' : field} = '${escapeSqlValue(value)}'`
+    )
     .join(' AND ');
 
   const values = new Set<string>();
@@ -70,12 +61,12 @@ async function fetchAdministrativeOptions(
 
     const response = await fetch(
       `${INDIA_LOCATION_QUERY_URL}?${params.toString()}`,
-      { signal },
+      { signal }
     );
 
     if (!response.ok) {
       throw new Error(
-        `Administrative location request failed (${response.status})`,
+        `Administrative location request failed (${response.status})`
       );
     }
 
@@ -88,8 +79,7 @@ async function fetchAdministrativeOptions(
 
     if (payload.error) {
       throw new Error(
-        payload.error.message ||
-          'Administrative location request failed',
+        payload.error.message || 'Administrative location request failed'
       );
     }
 
@@ -110,10 +100,7 @@ async function fetchAdministrativeOptions(
     offset += rows.length;
   }
 
-  // Use Array.from instead of spreading Set for older TS targets.
-  return Array.from(values).sort((a, b) =>
-    a.localeCompare(b),
-  );
+  return Array.from(values).sort((a, b) => a.localeCompare(b));
 }
 
 type LocationLevel =
@@ -123,14 +110,19 @@ type LocationLevel =
   | 'taluka'
   | 'village';
 
+type FilterField = 'state' | 'district' | 'subdistrict' | 'taluka';
+
 /**
- * Fetch public location options from the existing backend and
- * MongoDB-backed layout records.
+ * Fetch public location options from the existing backend and MongoDB-backed layout records.
+ * No external/dummy directory is used, so search filters stay in sync with saved public layouts.
  */
 export async function fetchPublicLocationOptions(
   level: LocationLevel,
-  filters: LocationFilter[] = [],
-  signal?: AbortSignal,
+  filters: Array<{
+    field: FilterField;
+    value: string;
+  }> = [],
+  signal?: AbortSignal
 ): Promise<string[]> {
   const normalizedLevel =
     level === 'subdistrict' || level === 'taluka'
@@ -140,19 +132,19 @@ export async function fetchPublicLocationOptions(
         : 'district';
 
   const district =
-    filters
-      .find((item) => item.field === 'district')
-      ?.value.trim() || '';
+    filters.find((item) => item.field === 'district')?.value.trim() || '';
 
   const taluka =
     filters
       .find(
         (item) =>
-          item.field === 'taluka' ||
-          item.field === 'subdistrict',
+          item.field === 'taluka' || item.field === 'subdistrict'
       )
       ?.value.trim() || '';
 
+  // These three districts are intentionally enabled even if no public layout has
+  // been saved there yet. Taluka/village options come from the administrative
+  // directory, with database-backed options preferred whenever available.
   const params = new URLSearchParams({
     level: normalizedLevel,
   });
@@ -172,12 +164,10 @@ export async function fetchPublicLocationOptions(
       `${getApiBaseUrl()}/layouts/public/location-options?${params.toString()}`,
       {
         method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
+        headers: { Accept: 'application/json' },
         signal,
         cache: 'no-store',
-      },
+      }
     );
 
     if (response.ok) {
@@ -187,42 +177,39 @@ export async function fetchPublicLocationOptions(
         message?: string;
       };
 
-      const values = Array.isArray(payload.data)
-        ? payload.data
-        : [];
+      const values = Array.isArray(payload.data) ? payload.data : [];
 
-      saved = Array.from(
-        new Set(
-          values
-            .filter(
-              (value): value is string =>
-                typeof value === 'string' &&
-                value.trim().length > 0,
-            )
-            .map((value) => value.trim()),
-        ),
-      );
+      const validValues = values
+        .filter(
+          (value): value is string =>
+            typeof value === 'string' && value.trim().length > 0
+        )
+        .map((value) => value.trim());
+
+      saved = Array.from(new Set<string>(validValues));
     }
   } catch (error) {
     if (signal?.aborted) {
       throw error;
     }
 
-    // Fall back to the administrative directory when the API
-    // is temporarily unavailable.
+    // Continue to the administrative directory when the layout API is temporarily unavailable.
   }
 
-  // District options come from saved public layouts and the
-  // three initially enabled districts.
+  // Districts are sourced from existing public-eligible database records,
+  // plus the three initial rollout districts.
   if (normalizedLevel === 'district') {
     return Array.from(
-      new Set([...PUBLIC_LOCATION_DISTRICTS, ...saved]),
+      new Set<string>([...PUBLIC_LOCATION_DISTRICTS, ...saved])
     ).sort((a, b) => a.localeCompare(b));
   }
 
-  // Prefer saved database values, with administrative directory
-  // values as a fallback for taluka and village options.
-  const directoryFilters: DirectoryFilter[] = [
+  // Taluka and village options prefer existing database values and use the
+  // administrative directory as a fallback for locations without a layout yet.
+  const directoryFilters: Array<{
+    field: 'state' | 'district' | 'taluka';
+    value: string;
+  }> = [
     {
       field: 'state',
       value: PUBLIC_LOCATION_STATE,
@@ -246,10 +233,10 @@ export async function fetchPublicLocationOptions(
   const directory = await fetchAdministrativeOptions(
     normalizedLevel,
     directoryFilters,
-    signal,
+    signal
   );
 
-  return Array.from(
-    new Set([...saved, ...directory]),
-  ).sort((a, b) => a.localeCompare(b));
+  return Array.from(new Set<string>([...saved, ...directory])).sort(
+    (a, b) => a.localeCompare(b)
+  );
 }

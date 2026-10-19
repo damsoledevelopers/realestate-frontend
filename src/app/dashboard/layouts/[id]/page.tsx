@@ -22,6 +22,7 @@ import PropertyQrPanel from '@/components/qr/PropertyQrPanel';
 import SitePhotosPanel from '@/components/sitePhotos/SitePhotosPanel';
 import ExternalLinksPanel from '@/components/externalLinks/ExternalLinksPanel';
 import ShareLocationButton from '@/components/property/ShareLocationButton';
+import ActiveLiveLocationSessions from '@/components/property/ActiveLiveLocationSessions';
 import PropertyPriceCell from '@/components/pricing/PropertyPriceCell';
 import { formatPropertyPrice } from '@/lib/properties';
 import { useLocale } from '@/context/LocaleContext';
@@ -122,6 +123,7 @@ export default function DashboardLayoutDetailPage() {
 
   return (
     <div className="dashboard-page">
+      {isSuperAdmin && <ActiveLiveLocationSessions token={token} />}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href="/dashboard/layouts" className="text-sm font-medium text-primary-600 hover:underline">
