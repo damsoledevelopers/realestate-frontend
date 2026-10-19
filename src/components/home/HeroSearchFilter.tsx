@@ -1,17 +1,9 @@
-
-'use client';
+ 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  buildLayoutsSearchParams,
-  type LayoutSortOption,
-  type PriceRangeFilter,
-} from '@/lib/layoutFilters';
-import {
-  fetchPublicLocationOptions,
-  PUBLIC_LOCATION_STATE,
-} from '@/lib/publicLocationDirectory';
+import { buildLayoutsSearchParams } from '@/lib/layoutFilters';
+import { fetchPublicLocationOptions, PUBLIC_LOCATION_STATE } from '@/lib/publicLocationDirectory';
 import { useLocale } from '@/context/LocaleContext';
 import { getLocalizedLocation } from '@/lib/localizedText';
 
@@ -26,31 +18,23 @@ type FilterState = {
   taluka: string;
   village: string;
   surveyNumber: string;
-  sortBy: LayoutSortOption;
-  priceRange: PriceRangeFilter;
-};
-
-const INITIAL_FILTERS: FilterState = {
-  search: '',
-  location: '',
-  state: PUBLIC_LOCATION_STATE,
-  district: '',
-  taluka: '',
-  village: '',
-  surveyNumber: '',
-  sortBy: 'newest',
-  priceRange: 'all',
 };
 
 export default function HeroSearchFilter() {
   const { locale, t } = useLocale();
   const router = useRouter();
 
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtersRef = useRef<FilterState>({ ...INITIAL_FILTERS });
+  const filtersRef = useRef<FilterState>({
+    search: '',
+    location: '',
+    state: PUBLIC_LOCATION_STATE,
+    district: '',
+    taluka: '',
+    village: '',
+    surveyNumber: '',
+  });
 
   const [search, setSearch] = useState('');
   const [state, setState] = useState(PUBLIC_LOCATION_STATE);
@@ -64,36 +48,38 @@ export default function HeroSearchFilter() {
   const [villages, setVillages] = useState<string[]>([]);
   const [locationOptionsError, setLocationOptionsError] = useState('');
 
+  filtersRef.current = {
+    ...filtersRef.current,
+    search,
+    state,
+    district,
+    taluka,
+    village,
+    surveyNumber,
+  };
+
   const applyFilters = useCallback(
-    (nextFilters: FilterState) => {
-      filtersRef.current = nextFilters;
-      router.push(buildLayoutsSearchParams(nextFilters));
+    (filters: FilterState) => {
+      router.push(
+        buildLayoutsSearchParams({
+          ...filters,
+          sortBy: 'newest',
+         priceRange: undefined,
+        })
+      );
     },
-    [router],
+    [router]
   );
 
-  const update = useCallback(
-    (patch: Partial<FilterState>) => {
-      const nextFilters: FilterState = {
-        ...filtersRef.current,
-        ...patch,
-      };
-
-      filtersRef.current = nextFilters;
-
-      applyFilters(nextFilters);
-    },
-    [applyFilters],
-  );
+  const update = (patch: Partial<FilterState>) => {
+    applyFilters({
+      ...filtersRef.current,
+      ...patch,
+    });
+  };
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
-
-    // Keep the latest input available even before the debounce finishes.
-    filtersRef.current = {
-      ...filtersRef.current,
-      search: value,
-    };
 
     if (searchTimerRef.current) {
       clearTimeout(searchTimerRef.current);
@@ -101,30 +87,20 @@ export default function HeroSearchFilter() {
 
     searchTimerRef.current = setTimeout(() => {
       update({ search: value });
-      searchTimerRef.current = null;
     }, 350);
   };
 
-  const districts =
-    state === PUBLIC_LOCATION_STATE ? districtOptions : [];
+  const districts = state === PUBLIC_LOCATION_STATE ? districtOptions : [];
 
   useEffect(() => {
     const controller = new AbortController();
 
-    setLocationOptionsError('');
-
     fetchPublicLocationOptions('district', [], controller.signal)
-      .then((options) => {
-        if (!controller.signal.aborted) {
-          setDistrictOptions(options);
-        }
-      })
+      .then(setDistrictOptions)
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
           setLocationOptionsError(
-            error instanceof Error
-              ? error.message
-              : 'Could not load districts.',
+            error instanceof Error ? error.message : 'Could not load districts.'
           );
         }
       });
@@ -149,19 +125,13 @@ export default function HeroSearchFilter() {
         { field: 'state', value: PUBLIC_LOCATION_STATE },
         { field: 'district', value: district },
       ],
-      controller.signal,
+      controller.signal
     )
-      .then((options) => {
-        if (!controller.signal.aborted) {
-          setTalukas(options);
-        }
-      })
+      .then(setTalukas)
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
           setLocationOptionsError(
-            error instanceof Error
-              ? error.message
-              : 'Could not load talukas.',
+            error instanceof Error ? error.message : 'Could not load talukas.'
           );
         }
       });
@@ -187,19 +157,13 @@ export default function HeroSearchFilter() {
         { field: 'district', value: district },
         { field: 'subdistrict', value: taluka },
       ],
-      controller.signal,
+      controller.signal
     )
-      .then((options) => {
-        if (!controller.signal.aborted) {
-          setVillages(options);
-        }
-      })
+      .then(setVillages)
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
           setLocationOptionsError(
-            error instanceof Error
-              ? error.message
-              : 'Could not load villages.',
+            error instanceof Error ? error.message : 'Could not load villages.'
           );
         }
       });
@@ -215,64 +179,6 @@ export default function HeroSearchFilter() {
     };
   }, []);
 
-  const handleStateChange = () => {
-    setState(PUBLIC_LOCATION_STATE);
-    setDistrict('');
-    setTaluka('');
-    setVillage('');
-
-    update({
-      state: PUBLIC_LOCATION_STATE,
-      district: '',
-      taluka: '',
-      village: '',
-    });
-  };
-
-  const handleDistrictChange = (value: string) => {
-    setDistrict(value);
-    setTaluka('');
-    setVillage('');
-
-    update({
-      district: value,
-      taluka: '',
-      village: '',
-    });
-  };
-
-  const handleTalukaChange = (value: string) => {
-    setTaluka(value);
-    setVillage('');
-
-    update({
-      taluka: value,
-      village: '',
-    });
-  };
-
-  const handleVillageChange = (value: string) => {
-    setVillage(value);
-    update({ village: value });
-  };
-
-  const handleSubmit = () => {
-    if (searchTimerRef.current) {
-      clearTimeout(searchTimerRef.current);
-      searchTimerRef.current = null;
-    }
-
-    applyFilters({
-      ...filtersRef.current,
-      search,
-      state,
-      district,
-      taluka,
-      village,
-      surveyNumber,
-    });
-  };
-
   return (
     <div className="box-border w-full min-w-0 max-w-full rounded-2xl border border-white/20 bg-white/10 p-3 shadow-2xl backdrop-blur-md sm:p-4 lg:p-5">
       <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -283,14 +189,11 @@ export default function HeroSearchFilter() {
           >
             Search layout or village
           </label>
-
           <input
             id="hero-search"
             type="search"
             value={search}
-            onChange={(event) =>
-              handleSearchChange(event.target.value)
-            }
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Layout name, village name..."
             className={fieldClassName}
           />
@@ -303,11 +206,22 @@ export default function HeroSearchFilter() {
           >
             {t('filters.state')}
           </label>
-
           <select
             id="hero-state"
             value={state}
-            onChange={handleStateChange}
+            onChange={() => {
+              setState(PUBLIC_LOCATION_STATE);
+              setDistrict('');
+              setTaluka('');
+              setVillage('');
+
+              update({
+                state: PUBLIC_LOCATION_STATE,
+                district: '',
+                taluka: '',
+                village: '',
+              });
+            }}
             className={fieldClassName}
           >
             <option value={PUBLIC_LOCATION_STATE}>
@@ -323,20 +237,20 @@ export default function HeroSearchFilter() {
           >
             District
           </label>
-
           <select
             id="hero-district"
             value={district}
             disabled={!state}
-            onChange={(event) =>
-              handleDistrictChange(event.target.value)
-            }
+            onChange={(e) => {
+              const value = e.target.value;
+              setDistrict(value);
+              setTaluka('');
+              setVillage('');
+              update({ district: value, taluka: '', village: '' });
+            }}
             className={`${fieldClassName} disabled:cursor-not-allowed disabled:bg-gray-100`}
           >
-            <option value="">
-              {t('filters.selectDistrict')}
-            </option>
-
+            <option value="">{t('filters.selectDistrict')}</option>
             {districts.map((item) => (
               <option key={item} value={item}>
                 {getLocalizedLocation(item, locale)}
@@ -352,20 +266,19 @@ export default function HeroSearchFilter() {
           >
             {t('filters.taluka')}
           </label>
-
           <select
             id="hero-taluka"
             value={taluka}
             disabled={!district}
-            onChange={(event) =>
-              handleTalukaChange(event.target.value)
-            }
+            onChange={(e) => {
+              const value = e.target.value;
+              setTaluka(value);
+              setVillage('');
+              update({ taluka: value, village: '' });
+            }}
             className={`${fieldClassName} disabled:cursor-not-allowed disabled:bg-gray-100`}
           >
-            <option value="">
-              {t('filters.selectTaluka')}
-            </option>
-
+            <option value="">{t('filters.selectTaluka')}</option>
             {talukas.map((item) => (
               <option key={item} value={item}>
                 {getLocalizedLocation(item, locale)}
@@ -381,20 +294,17 @@ export default function HeroSearchFilter() {
           >
             {t('filters.village')}
           </label>
-
           <select
             id="hero-village"
             value={village}
             disabled={!district}
-            onChange={(event) =>
-              handleVillageChange(event.target.value)
-            }
+            onChange={(e) => {
+              setVillage(e.target.value);
+              update({ village: e.target.value });
+            }}
             className={`${fieldClassName} disabled:cursor-not-allowed disabled:bg-gray-100`}
           >
-            <option value="">
-              {t('filters.selectVillage')}
-            </option>
-
+            <option value="">{t('filters.selectVillage')}</option>
             {villages.map((item) => (
               <option key={item} value={item}>
                 {getLocalizedLocation(item, locale)}
@@ -410,16 +320,13 @@ export default function HeroSearchFilter() {
           >
             Survey / Gat Number
           </label>
-
           <input
             id="hero-survey"
             type="search"
             value={surveyNumber}
-            onChange={(event) => {
-              const value = event.target.value;
-
-              setSurveyNumber(value);
-              update({ surveyNumber: value });
+            onChange={(e) => {
+              setSurveyNumber(e.target.value);
+              update({ surveyNumber: e.target.value });
             }}
             placeholder="Enter survey or gat no."
             className={fieldClassName}
@@ -429,7 +336,13 @@ export default function HeroSearchFilter() {
         <div className="flex min-w-0 items-end">
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => {
+              if (searchTimerRef.current) {
+                clearTimeout(searchTimerRef.current);
+              }
+
+              applyFilters(filtersRef.current);
+            }}
             className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white shadow transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-white/80"
           >
             Search Plots / Layouts

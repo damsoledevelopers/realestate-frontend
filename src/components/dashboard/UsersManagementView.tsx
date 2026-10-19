@@ -243,22 +243,11 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
           },
           token
         );
-        let assignmentSaveFailed = false;
         if (values.assignments?.length) {
-          try {
-            await api.put(`/users/${created._id}/assignments`, { assignments: values.assignments }, token);
-          } catch (assignmentError) {
-            assignmentSaveFailed = true;
-            // The user creation succeeded; assignments can be retried from user details.
-            notify.error((assignmentError as { message?: string }).message || 'User created, but asset assignments could not be saved. Open the user details to retry.');
-          }
+          await api.put(`/users/${created._id}/assignments`, { assignments: values.assignments }, token);
         }
         setUsers((prev) => [created, ...prev]);
-        if (!assignmentSaveFailed) {
-          notify.success(values.assignments?.length
-            ? `${t('dashboard.users.createSuccess')} Assets assigned: ${values.assignments.length}.`
-            : t('dashboard.users.createSuccess'));
-        }
+        notify.success(t('dashboard.users.createSuccess'));
         setFormOpen(false);
         fetchUsers();
       } else if (selectedUser) {
@@ -270,6 +259,7 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
         if (values.password) payload.password = values.password;
 
         const updated = await api.put<User>(`/users/${selectedUser.user._id}`, payload, token);
+        await api.put(`/users/${selectedUser.user._id}/assignments`, { assignments: values.assignments || [] }, token);
         setUsers((prev) =>
           prev.map((u) => (u._id === selectedUser.user._id ? { ...u, ...updated } : u))
         );

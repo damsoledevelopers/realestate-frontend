@@ -158,7 +158,7 @@ export default function LayoutFormModal({
 
   const districts = layoutForm.state === 'Maharashtra'
     ? [...ADD_LAYOUT_DISTRICTS]
-    : [];
+    : []; 
   const savedTalukas = getDependentLocationOptions(locationLayouts, 'taluka', { state: layoutForm.state, district: layoutForm.district });
   const talukas = Array.from(new Set([...talukaMaster, ...savedTalukas, ...(layoutForm.taluka ? [layoutForm.taluka] : [])]))
     .sort((a, b) => a.localeCompare(b));

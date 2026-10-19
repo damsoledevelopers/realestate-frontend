@@ -81,7 +81,7 @@ export default function ShareLocationButton({
     if (!token) { setError('Please sign in to share live location.'); return; }
     if (!assetId) { setError('This asset is missing its database ID, so live sharing cannot start.'); return; }
     if (!navigator.geolocation) { setError('This browser does not support GPS location.'); return; }
-    if (!window.isSecureContext) { setError('Live GPS sharing requires the deployed HTTPS website.'); return; }
+    if (!window.isSecureContext) { setError('Live GPS sharing requires HTTPS or localhost (browser GPS security requirement).'); return; }
     setStarting(true); setError('');
     const whatsappTab = window.open('about:blank', '_blank');
     try {
@@ -89,12 +89,18 @@ export default function ShareLocationButton({
       const session = await api.post<LiveSession>('/inquiries/live-location', {
         durationHours: duration, recipientName: '', layoutName: title, plotNumber: '', assetType, assetId,
       }, token);
-      const shareUrl = new URL(session.shareUrl);
-      if (!['https:', 'http:'].includes(shareUrl.protocol) || /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(shareUrl.hostname)) throw new Error('The backend must be configured with the deployed public HTTPS frontend URL.');
+      // The browser origin is authoritative: localhost stays local, Vercel previews
+      // stay on their preview host, and custom-domain production uses that domain.
+      // Do not trust a stale URL returned by a backend deployed in another environment.
+      const origin = window.location.origin;
+      const shareUrl = new URL(`/live-location/${encodeURIComponent(session.token)}`, origin);
+      if (!['https:', 'http:'].includes(shareUrl.protocol)) throw new Error('The current website URL is invalid. Open the site using HTTP or HTTPS.');
+      if (process.env.NODE_ENV === 'production' && shareUrl.protocol !== 'https:') throw new Error('Production live-location sharing requires HTTPS.');
       await api.patch(`/inquiries/live-location/${session.token}`, { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }, token);
       setActiveSession(session);
       setLiveDialog(false); setOpen(false);
-      const message = `${title} — live GPS location for ${session.durationHours} hour(s). Expires: ${new Date(session.expiresAt).toLocaleString()}. View latest location: ${shareUrl.href}`;
+      const gpsMapsUrl = `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`;
+      const message = `${title} — live GPS location for ${session.durationHours} hour(s). Expires: ${new Date(session.expiresAt).toLocaleString()}.\nTrack live location: ${shareUrl.href}\nCurrent GPS on Google Maps: ${gpsMapsUrl}${mapsUrl ? `\nProperty on Google Maps: ${mapsUrl}` : ''}`;
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
       if (whatsappTab && !whatsappTab.closed) whatsappTab.location.replace(whatsappUrl);
       else window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -131,7 +137,7 @@ export default function ShareLocationButton({
         <ShareMenuItem onClick={copyLink} label={t('property.copyLink')} />
       </div>}
       {activeSession && <div className="mt-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900"><p className="font-semibold">Live location sharing active</p><p>Expires: {new Date(activeSession.expiresAt).toLocaleString()}</p><button type="button" onClick={() => void stopLiveShare()} className="mt-2 rounded-md bg-red-600 px-3 py-1.5 font-semibold text-white">Stop sharing</button></div>}
-      {liveDialog && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="layout-live-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><h3 id="layout-live-title" className="text-lg font-semibold text-gray-900">Share Live Location</h3><p className="mt-2 text-sm text-gray-600">Choose how long your current GPS position can be viewed. Keep this page open while sharing.</p><div className="mt-4 grid grid-cols-3 gap-2">{DURATIONS.map((hours) => <button key={hours} type="button" onClick={() => setDuration(hours)} className={`rounded-xl border px-3 py-3 text-sm font-semibold ${duration === hours ? 'border-green-500 bg-green-50 text-green-800 ring-2 ring-green-200' : 'border-gray-200 text-gray-700'}`}>{hours} {hours === 1 ? 'hour' : 'hours'}</button>)}</div><p className="mt-3 text-xs text-gray-500">This sends one WhatsApp message with a secure tracking link. It is not WhatsApp’s built-in live-location feature. GPS requires browser permission and HTTPS.</p>{error && <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}<div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setLiveDialog(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700">Cancel</button><button type="button" disabled={starting} onClick={() => void startLiveShare()} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{starting ? 'Starting…' : 'Start & Share on WhatsApp'}</button></div></div></div>}
+      {liveDialog && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="layout-live-title"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><h3 id="layout-live-title" className="text-lg font-semibold text-gray-900">Share Live Location</h3><p className="mt-2 text-sm text-gray-600">Choose how long your current GPS position can be viewed. Keep this page open while sharing.</p><div className="mt-4 grid grid-cols-3 gap-2">{DURATIONS.map((hours) => <button key={hours} type="button" onClick={() => setDuration(hours)} className={`rounded-xl border px-3 py-3 text-sm font-semibold ${duration === hours ? 'border-green-500 bg-green-50 text-green-800 ring-2 ring-green-200' : 'border-gray-200 text-gray-700'}`}>{hours} {hours === 1 ? 'hour' : 'hours'}</button>)}</div><p className="mt-3 text-xs text-gray-500">This sends one WhatsApp message with a secure tracking link. It is not WhatsApp’s built-in live-location feature. GPS requires browser permission and HTTPS or localhost.</p>{error && <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}<div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setLiveDialog(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700">Cancel</button><button type="button" disabled={starting} onClick={() => void startLiveShare()} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{starting ? 'Starting…' : 'Start & Share on WhatsApp'}</button></div></div></div>}
     </div>
   );
 }
