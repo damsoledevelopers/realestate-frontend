@@ -12,7 +12,7 @@ Disallow: /my-bookings
 Disallow: /profile
 
 # Host
-Host: http://localhost:3000
+Host: https://plot-realestate.vercel.app
 
 # Sitemaps
-Sitemap: http://localhost:3000/sitemap.xml
+Sitemap: https://plot-realestate.vercel.app/sitemap.xml

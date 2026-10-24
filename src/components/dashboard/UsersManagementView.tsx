@@ -81,8 +81,6 @@ export default function UsersManagementView() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
-
   const updateRole = async (user: User, role: 'super_admin' | 'dashboard_admin' | 'user' | 'partner' | 'customer' | 'admin') => {
     if (!token || user.role === role) return;
     const isElevation = role === 'super_admin' && user.role !== 'super_admin';
@@ -288,7 +286,7 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
           type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder={t('dashboard.users.searchPlaceholder')}
+          placeholder="Search by name, email, or mobile number..."
           className="input-field w-full sm:max-w-xs"
         />
         <button type="button" onClick={openCreateForm} className="btn-primary w-full sm:w-auto">
@@ -300,7 +298,7 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
         {loading ? (
           <p className="text-sm text-gray-400">{t('common.loading')}</p>
         ) : users.length === 0 ? (
-          <p className="text-sm text-gray-400">{t('dashboard.users.emptyList')}</p>
+          <p className="text-sm text-gray-400">{search ? 'No users match your search.' : t('dashboard.users.emptyList')}</p>
         ) : (
           <>
             <div className="table-wrap">
@@ -343,8 +341,8 @@ const SUPER_ADMIN_ELEVATION_CONFIRM = 'CREATE_SUPER_ADMIN';
                         <option value="customer">{t('dashboard.users.role.customer')}</option>
                         <option value="user">{t('dashboard.users.role.user')}</option>
                         <option value="partner">Partner</option>
-                        <option value="admin">Admin (Enquiries only)</option>
-                       <option value="dashboard_admin">Admin (Dashboard access)</option>
+                        <option value="admin">Existing Admin (Enquiries only)</option>
+                  <option value="dashboard_admin">New Admin (Dashboard access)</option>
                         <option value="super_admin">{t('dashboard.users.role.superAdmin')}</option>
                       </select>
                     </td>
