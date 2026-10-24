@@ -12,8 +12,10 @@ import InquiryStatusBadge from '@/components/inquiries/InquiryStatusBadge';
 import { useLocale } from '@/context/LocaleContext';
 
 export default function AdminInquiriesPage() {
-  const { token, user } = useAuth();
-  const canManageInquiries = user?.role === 'admin';
+ const { token, user } = useAuth();
+
+const canManageInquiries = ['admin', 'dashboard_admin', 'super_admin'].includes(user?.role || '');
+const isSuperAdmin = user?.role === 'super_admin';
   const confirm = useConfirm();
   const { t } = useLocale();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -87,28 +89,23 @@ export default function AdminInquiriesPage() {
   };
 
   const remove = async (id: string) => {
-  if (!token || user?.role !== 'admin') return;
-
-  const confirmed = await confirm({
-    title: t('dashboard.inquiries.deleteTitle'),
-    message: t('dashboard.inquiries.deleteMessage'),
-    confirmLabel: t('common.delete'),
-    variant: 'danger',
-  });
-
-  if (!confirmed) return;
-
-  try {
-    await api.delete(`/inquiries/${id}`, token);
-    setInquiries((prev) => prev.filter((i) => i._id !== id));
-    setSelected(null);
-    notify.success(t('dashboard.inquiries.deleteSuccess'));
-  } catch (err: unknown) {
-    notify.error(
-      getApiErrorMessage(err, t('dashboard.inquiries.deleteFailed'))
-    );
-  }
-};
+    if (!token || !isSuperAdmin) return;
+    const confirmed = await confirm({
+      title: t('dashboard.inquiries.deleteTitle'),
+      message: t('dashboard.inquiries.deleteMessage'),
+      confirmLabel: t('common.delete'),
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    try {
+      await api.delete(`/inquiries/${id}`, token);
+      setInquiries((prev) => prev.filter((i) => i._id !== id));
+      setSelected(null);
+      notify.success(t('dashboard.inquiries.deleteSuccess'));
+    } catch (err: unknown) {
+      notify.error(getApiErrorMessage(err, t('dashboard.inquiries.deleteFailed')));
+    }
+  };
 
   const openInquiry = (inquiry: Inquiry) => {
     setSelected(inquiry);

@@ -21,7 +21,7 @@ type PartnerRequestItem = {
 type FilterStatus = 'pending' | 'approved' | 'rejected';
 
 export default function PartnerRequestsPage() {
-  const { token, user, isSuperAdmin } = useAuth();
+  const { token, user } = useAuth();
   const [status, setStatus] = useState<FilterStatus>('pending');
   const [requests, setRequests] = useState<PartnerRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +29,7 @@ export default function PartnerRequestsPage() {
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
-    if (!token || !isSuperAdmin) {
+    if (!token || user?.role !== 'super_admin') {
       setLoading(false);
       return;
     }
@@ -38,11 +38,11 @@ export default function PartnerRequestsPage() {
       .then(setRequests)
       .catch((err: unknown) => notify.error((err as { message?: string })?.message || 'Failed to load partner requests.'))
       .finally(() => setLoading(false));
-  }, [token, isSuperAdmin, status]);
+  }, [token, user?.role, status]);
 
   useEffect(() => { load(); }, [load]);
 
-  if (user?.role !== 'super_admin' && !isSuperAdmin) {
+  if (user?.role !== 'super_admin') {
     return <div className="dashboard-page"><div className="card"><h2 className="font-semibold">Super Admin access required</h2></div></div>;
   }
 

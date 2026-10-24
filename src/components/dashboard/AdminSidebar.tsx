@@ -72,12 +72,17 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const { t } = useLocale();
 
   const isEnquiryOnlyAdmin = user?.role === 'admin';
+  const isDashboardAdmin = user?.role === 'dashboard_admin';
   const isPartner = user?.role === 'partner';
+  const restrictedUserManagementPaths = ['/dashboard/users', '/dashboard/access-requests', '/dashboard/partner-requests', '/dashboard/login-history'];
   const navItems = isEnquiryOnlyAdmin
     ? ALL_NAV_ITEMS.filter((item) => ['/dashboard', '/dashboard/inquiries', '/dashboard/profile'].includes(item.href))
     : isPartner
       ? ALL_NAV_ITEMS.filter((item) => ['/dashboard', '/dashboard/layouts', '/dashboard/profile'].includes(item.href))
-      : ALL_NAV_ITEMS.filter((item) => item.href !== '/dashboard/inquiries' && (!item.superAdminOnly || isSuperAdmin));
+      : ALL_NAV_ITEMS.filter((item) =>
+          (item.href === '/dashboard/inquiries' || !item.superAdminOnly || isSuperAdmin || isDashboardAdmin) &&
+          (!isDashboardAdmin || !restrictedUserManagementPaths.includes(item.href))
+        );
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -93,7 +98,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
           RealEstate
         </Link>
         <p className="mt-1 text-xs font-medium text-gray-500">
-          {isSuperAdmin ? t('dashboard.panel.superAdmin') : isEnquiryOnlyAdmin ? 'Enquiry Admin' : isPartner ? 'Partner Portal' : t('dashboard.panel.manager')}
+          {isDashboardAdmin ? 'Admin' : isSuperAdmin ? t('dashboard.panel.superAdmin') : isEnquiryOnlyAdmin ? 'Enquiry Admin' : isPartner ? 'Partner Portal' : t('dashboard.panel.manager')}
         </p>
       </div>
       <nav className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain px-3 py-5">
