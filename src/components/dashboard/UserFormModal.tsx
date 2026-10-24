@@ -12,7 +12,7 @@ export interface UserFormValues {
   email: string;
   password: string;
   phone: string;
-  role: 'super_admin' | 'user' | 'partner' | 'customer' | 'admin';
+  role: 'super_admin' | 'dashboard_admin' | 'user' | 'partner' | 'customer' | 'admin';
   isActive: boolean;
   assignments: { assetType: 'layout' | 'plot' | 'farm' | 'land'; assetId: string }[];
 }
@@ -60,7 +60,7 @@ export default function UserFormModal({
         email: initialUser.email,
         password: '',
         phone: initialUser.phone || '',
-        role: ['super_admin', 'customer', 'admin', 'partner'].includes(initialUser.role)
+        role: ['super_admin', 'dashboard_admin', 'customer', 'admin', 'partner'].includes(initialUser.role)
           ? (initialUser.role as UserFormValues['role'])
           : 'user',
         isActive: initialUser.isActive,
@@ -179,7 +179,8 @@ export default function UserFormModal({
                   <option value="customer">{t('dashboard.users.role.customer')}</option>
                   <option value="user">{t('dashboard.users.role.user')}</option>
                   <option value="partner">Partner (managed in Users)</option>
-                  <option value="admin">Admin</option>
+                  <option value="admin">Admin (Enquiries only)</option>
+                  <option value="dashboard_admin">Admin (Dashboard access)</option>
                   <option value="super_admin">{t('dashboard.users.role.superAdmin')}</option>
                 </select>
               </div>

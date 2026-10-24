@@ -14,7 +14,7 @@ export interface User {
   id?: string;
   name: string;
   email: string;
-  role: 'super_admin' | 'user' | 'partner' | 'customer' | 'admin';
+  role: 'super_admin' | 'dashboard_admin' | 'user' | 'partner' | 'customer' | 'admin';
   isActive: boolean;
   dashboardRequestStatus?: DashboardRequestStatus;
   dashboardRequestDocument?: string;
